@@ -1,0 +1,138 @@
+// Prisma schema for Xthlete Smart Tournament Engine
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum MatchStatus {
+  PENDING
+  SCHEDULED
+  LIVE
+  COMPLETED
+}
+
+enum NextMatchSlot {
+  A
+  B
+}
+
+model Club {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  players  Player[]
+
+  @@map("clubs")
+}
+
+model Player {
+  id              String   @id @default(uuid())
+  fullName        String
+  clubId          String?
+  club            Club?    @relation(fields: [clubId], references: [id])
+  registrations   Registration[]
+  matchesAsPlayerA Match[] @relation("playerA")
+  matchesAsPlayerB Match[] @relation("playerB")
+  matchesWon      Match[]  @relation("winner")
+
+  createdAt       DateTime @default(now())
+
+  @@map("players")
+}
+
+model Tournament {
+  id          String     @id @default(uuid())
+  name        String
+  startTime   DateTime?
+  courts      String[]   // ["Court 1", "Court 2", ...]
+
+  events      Event[]
+  matches     Match[]
+
+  @@map("tournaments")
+}
+
+model Event {
+  id           String     @id @default(uuid())
+  tournamentId String
+  name         String
+  format       String     // "knockout" | "round_robin"
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  registrations Registration[]
+  matches      Match[]
+
+  @@map("events")
+}
+
+model Registration {
+  id        String   @id @default(uuid())
+  eventId   String
+  playerId  String
+
+  event     Event    @relation(fields: [eventId], references: [id])
+  player    Player   @relation(fields: [playerId], references: [id])
+
+  @@unique([eventId, playerId]) // Player cannot register twice
+
+  @@map("registrations")
+}
+
+model Match {
+  id             String       @id @default(uuid())
+  tournamentId   String
+  eventId        String
+
+  round          Int
+  indexInRound   Int
+
+  playerAId      String?
+  playerA        Player?      @relation("playerA", fields: [playerAId], references: [id])
+
+  playerBId      String?
+  playerB        Player?      @relation("playerB", fields: [playerBId], references: [id])
+
+  winnerId       String?
+  winner         Player?      @relation("winner", fields: [winnerId], references: [id])
+
+  court          String?
+  scheduledStart DateTime?
+  actualStart    DateTime?
+  actualEnd      DateTime?
+
+  nextMatchId    String?
+  nextMatch      Match?       @relation("nextMatch", fields: [nextMatchId], references: [id])
+  previousMatches Match[]     @relation("nextMatch")
+
+  nextMatchSlot  NextMatchSlot?
+
+  secrets        MatchSecret?
+
+  status         MatchStatus  @default(PENDING)
+
+  event          Event        @relation(fields: [eventId], references: [id])
+  tournament     Tournament   @relation(fields: [tournamentId], references: [id])
+
+  @@index([eventId, round])
+  @@index([tournamentId, round])
+  @@index([playerAId])
+  @@index([playerBId])
+  @@index([nextMatchId])
+
+  @@map("matches")
+}
+
+model MatchSecret {
+  matchId        String    @id
+  match          Match     @relation(fields: [matchId], references: [id])
+
+  codeHash       String
+  assignedUmpire String
+  isValid        Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  @@map("match_secrets")
+}
