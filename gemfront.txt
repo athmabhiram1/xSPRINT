@@ -1,0 +1,845 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Trophy, Calendar, Users, MapPin, Search, ChevronRight, 
+  Activity, Grid, List, Shield, Clock, AlertCircle, 
+  CheckCircle, Menu, X, Settings, User, Play, BarChart3,
+  MoreHorizontal, ArrowLeft, Plus, Download, Eye, Lock, Mail
+} from 'lucide-react';
+
+// --- MOCK DATA & CONSTANTS ---
+
+const BRAND = {
+  primary: "#00E18B", // Emerald Green
+  secondary: "#0A0A0A", // Rich Black
+  text: "#1B1B1F", // Charcoal
+  bg: "#F8F9FB", // Light Gray
+};
+
+const TOURNAMENTS = [
+  {
+    id: 1,
+    title: "Neon Smash Open 2025",
+    sport: "Badminton",
+    date: "Oct 12-14, 2025",
+    location: "Apex Arena, NYC",
+    category: "Open Doubles",
+    status: "Registration Open",
+    image: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800",
+    prize: "$5,000",
+    registered: 32,
+    capacity: 64
+  },
+  {
+    id: 2,
+    title: "City Hoop Wars",
+    sport: "Basketball",
+    date: "Nov 05-07, 2025",
+    location: "Downtown Courts, LA",
+    category: "U21 Mens",
+    status: "Live Now",
+    image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=800",
+    prize: "$10,000",
+    registered: 12,
+    capacity: 16
+  },
+  {
+    id: 3,
+    title: "Grand Master Chess",
+    sport: "Chess",
+    date: "Dec 01, 2025",
+    location: "Convention Center, SF",
+    category: "Blitz",
+    status: "Upcoming",
+    image: "https://images.unsplash.com/photo-1529699213352-e3cf35116f2e?auto=format&fit=crop&q=80&w=800",
+    prize: "$2,000",
+    registered: 88,
+    capacity: 100
+  }
+];
+
+const FIXTURES = [
+  { id: 101, p1: "Alex Chen", p2: "Marcus Roe", court: "C1", time: "10:00 AM", status: "Live", score: "18-16" },
+  { id: 102, p1: "Sarah Smith", p2: "Emma Wu", court: "C2", time: "10:30 AM", status: "Scheduled", score: "0-0" },
+  { id: 103, p1: "D. Johnson", p2: "K. Patel", court: "C1", time: "11:00 AM", status: "Scheduled", score: "0-0" },
+];
+
+const SCHEDULE_GRID = [
+  { time: "09:00", c1: { id: 201, label: "MS-Q1: Lee vs Dan", type: "match" }, c2: null, c3: { id: 202, label: "WS-Q1", type: "match" } },
+  { time: "09:30", c1: { id: 203, label: "Rest/Buffer", type: "buffer" }, c2: { id: 204, label: "MD-R16", type: "match" }, c3: null },
+  { time: "10:00", c1: { id: 205, label: "MS-Q2: Chen vs Roe", type: "match" }, c2: null, c3: null },
+];
+
+// --- UI COMPONENTS ---
+
+const Button = ({ children, variant = 'primary', className = '', onClick, icon: Icon }) => {
+  const baseStyle = "inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold transition-all duration-200 active:scale-95 text-sm sm:text-base";
+  const variants = {
+    primary: `bg-[#00E18B] text-[#0A0A0A] hover:bg-[#00c47a] shadow-lg shadow-[#00E18B]/20`,
+    secondary: "bg-[#0A0A0A] text-white hover:bg-gray-800 shadow-lg",
+    outline: "border-2 border-[#0A0A0A] text-[#0A0A0A] hover:bg-gray-50",
+    ghost: "text-gray-600 hover:bg-gray-100",
+    danger: "bg-red-500 text-white hover:bg-red-600"
+  };
+
+  return (
+    <button onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
+      {Icon && <Icon size={18} className="mr-2" />}
+      {children}
+    </button>
+  );
+};
+
+const Badge = ({ children, variant = 'default' }) => {
+  const styles = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    live: "bg-red-100 text-red-600 animate-pulse",
+    outline: "border border-gray-200 text-gray-600"
+  };
+  return (
+    <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${styles[variant]}`}>
+      {children}
+    </span>
+  );
+};
+
+const Card = ({ children, className = '', hover = true }) => (
+  <motion.div 
+    whileHover={hover ? { y: -4, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" } : {}}
+    className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${className}`}
+  >
+    {children}
+  </motion.div>
+);
+
+const Input = ({ placeholder, type = "text", className = "", icon: Icon }) => (
+  <div className="relative w-full">
+    {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />}
+    <input 
+      type={type} 
+      placeholder={placeholder}
+      className={`w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-[#00E18B] outline-none text-gray-900 placeholder-gray-400 transition-all ${Icon ? 'pl-12' : ''} ${className}`} 
+    />
+  </div>
+);
+
+// --- PAGE SECTIONS ---
+
+const Navbar = ({ setView, activeView, isMobileMenuOpen, setIsMobileMenuOpen }) => (
+  <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center h-20">
+        <div className="flex items-center cursor-pointer" onClick={() => setView('landing')}>
+          <div className="w-10 h-10 bg-[#00E18B] rounded-lg flex items-center justify-center mr-3 transform rotate-3">
+            <Trophy className="text-[#0A0A0A]" size={24} />
+          </div>
+          <span className="text-2xl font-bold text-[#0A0A0A] tracking-tight">Xthlete<span className="text-[#00E18B]">.</span></span>
+        </div>
+        
+        {/* Desktop Menu */}
+        <div className="hidden md:flex space-x-8 items-center">
+          {['Tournaments', 'Schedule', 'Umpires', 'Admin'].map((item) => (
+            <button 
+              key={item}
+              onClick={() => setView(item.toLowerCase())}
+              className={`text-sm font-medium transition-colors hover:text-[#00E18B] ${activeView === item.toLowerCase() ? 'text-[#0A0A0A] font-bold' : 'text-gray-500'}`}
+            >
+              {item}
+            </button>
+          ))}
+          {/* Updated Sign In Logic */}
+          <Button variant="secondary" onClick={() => setView('login')}>Sign In</Button>
+        </div>
+
+        {/* Mobile Toggle */}
+        <div className="md:hidden">
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-700 p-2">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    {/* Mobile Menu */}
+    <AnimatePresence>
+      {isMobileMenuOpen && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="md:hidden bg-white border-b border-gray-100 overflow-hidden"
+        >
+          <div className="px-4 pt-2 pb-6 space-y-2">
+            {['Tournaments', 'Schedule', 'Umpires', 'Admin'].map((item) => (
+              <button 
+                key={item}
+                onClick={() => { setView(item.toLowerCase()); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+              >
+                {item}
+              </button>
+            ))}
+            <button 
+                onClick={() => { setView('login'); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-3 text-base font-bold text-[#00E18B] hover:bg-gray-50 rounded-lg"
+            >
+                Sign In
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </nav>
+);
+
+// --- VIEWS ---
+
+const LoginView = ({ setView }) => (
+  <div className="min-h-[80vh] flex items-center justify-center px-4 bg-[#F8F9FB]">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100"
+    >
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-[#00E18B] rounded-2xl flex items-center justify-center mx-auto mb-4 transform rotate-3 shadow-lg shadow-emerald-100">
+          <Trophy className="text-[#0A0A0A]" size={32} />
+        </div>
+        <h2 className="text-3xl font-bold text-[#0A0A0A]">Welcome Back</h2>
+        <p className="text-gray-500 mt-2">Sign in to manage your tournaments</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Email</label>
+          <Input placeholder="athlete@xthlete.com" type="email" icon={Mail} />
+        </div>
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Password</label>
+          <Input placeholder="••••••••" type="password" icon={Lock} />
+        </div>
+        
+        <div className="flex justify-between items-center text-sm">
+          <label className="flex items-center text-gray-600 cursor-pointer hover:text-gray-900">
+            <input type="checkbox" className="mr-2 rounded border-gray-300 text-[#00E18B] focus:ring-[#00E18B]" />
+            Remember me
+          </label>
+          <button className="text-[#00E18B] font-bold hover:underline hover:text-emerald-600">Forgot password?</button>
+        </div>
+
+        <Button className="w-full py-4 text-lg shadow-xl shadow-emerald-200/50 hover:shadow-emerald-200" onClick={() => setView('admin')}>
+          Sign In
+        </Button>
+        
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+          <div className="relative flex justify-center text-xs uppercase tracking-widest font-semibold"><span className="px-3 bg-white text-gray-400">Or continue with</span></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <button className="flex items-center justify-center px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-gray-700">
+             {/* Simple SVG for Google */}
+             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+             Google
+          </button>
+           <button className="flex items-center justify-center px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-gray-700">
+             {/* Simple SVG for Apple */}
+             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.45-1.67 4.06-1.67 1.27 0 2.37.52 3.05 1.51-4.3 1.79-3.45 6.9 1.24 8.92-.32 1.03-1.12 2.38-2.38 3.47h-.05zm-3.05-17.3c.87-.88 1.42-2.21 1.16-3.98-1.49.18-3.32 1.1-4.15 2.81-.66 1.44-.17 2.78 1.12 2.68 1.24 0 1.76.04 1.87-1.51z"/></svg>
+             Apple
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8 text-center text-sm text-gray-500">
+        Don't have an account? <button onClick={() => setView('landing')} className="text-[#00E18B] font-bold hover:underline ml-1">Sign up</button>
+      </div>
+    </motion.div>
+  </div>
+);
+
+const LandingView = ({ setView }) => (
+  <div className="space-y-20 pb-20">
+    {/* Hero */}
+    <section className="relative overflow-hidden bg-[#0A0A0A] pt-20 pb-32 rounded-b-[3rem]">
+      <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#00E18B] rounded-full mix-blend-overlay blur-[120px] opacity-20 animate-pulse"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <Badge variant="success" className="mb-6 inline-block bg-[#00E18B]/20 text-[#00E18B] border border-[#00E18B]/20">New Season 2025</Badge>
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
+            Smart Tournaments.<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E18B] to-teal-400">Real-Time Results.</span>
+          </h1>
+          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+            The complete operating system for modern sports. Manage fixtures, live scoring, and player analytics in one premium dashboard.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button onClick={() => setView('tournaments')}>Find Tournaments</Button>
+            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">Host an Event</Button>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+
+    {/* Stats */}
+    <div className="max-w-7xl mx-auto px-4 -mt-24 relative z-20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: "Tournaments Hosted", val: "100+" },
+          { label: "Active Clubs", val: "300+" },
+          { label: "Registered Athletes", val: "2,000+" },
+        ].map((stat, idx) => (
+          <Card key={idx} className="p-8 text-center shadow-xl border-0">
+            <h3 className="text-4xl font-bold text-[#0A0A0A] mb-2">{stat.val}</h3>
+            <p className="text-gray-500 font-medium uppercase tracking-wider text-sm">{stat.label}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+
+    {/* Sports Grid */}
+    <section className="max-w-7xl mx-auto px-4">
+      <div className="flex justify-between items-end mb-10">
+        <div>
+          <h2 className="text-3xl font-bold text-[#0A0A0A]">Discover Sports</h2>
+          <p className="text-gray-500 mt-2">Find competition in your favorite discipline</p>
+        </div>
+        <button className="text-[#00E18B] font-semibold flex items-center hover:underline">View All <ChevronRight size={16} /></button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        {['Badminton', 'Basketball', 'Cricket', 'Football', 'Chess', 'Pickleball'].map((sport, idx) => (
+          <motion.div 
+            key={idx}
+            whileHover={{ y: -5 }}
+            className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-3 cursor-pointer group"
+          >
+            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-[#00E18B] group-hover:text-[#0A0A0A] transition-colors">
+              <Activity size={20} />
+            </div>
+            <span className="font-semibold text-gray-800">{sport}</span>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+    
+    {/* Featured Tournaments */}
+    <section className="max-w-7xl mx-auto px-4">
+      <h2 className="text-3xl font-bold text-[#0A0A0A] mb-10">Trending Events</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {TOURNAMENTS.map((t) => (
+          <Card key={t.id} className="group cursor-pointer">
+            <div className="relative h-48 overflow-hidden">
+              <div className="absolute top-4 right-4 z-10">
+                <Badge variant={t.status === "Live Now" ? "live" : "default"}>{t.status}</Badge>
+              </div>
+              <img src={t.image} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-4 left-4 text-white">
+                <p className="text-xs font-bold uppercase tracking-wider mb-1 text-[#00E18B]">{t.sport}</p>
+                <h3 className="text-xl font-bold">{t.title}</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center text-gray-500 text-sm mb-4 space-x-4">
+                <div className="flex items-center"><Calendar size={14} className="mr-1"/> {t.date}</div>
+                <div className="flex items-center"><MapPin size={14} className="mr-1"/> {t.location.split(',')[1]}</div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">{t.category}</span>
+                <Button variant="outline" className="py-2 px-4 text-xs rounded-lg" onClick={() => setView('details')}>Details</Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  </div>
+);
+
+const TournamentsView = ({ setView }) => (
+  <div className="max-w-7xl mx-auto px-4 py-12">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+      <div>
+        <h1 className="text-3xl font-bold text-[#0A0A0A]">All Tournaments</h1>
+        <p className="text-gray-500 mt-1">Join upcoming events in your area</p>
+      </div>
+      <div className="flex gap-2 w-full md:w-auto">
+        <div className="relative flex-1 md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00E18B]" placeholder="Search events..." />
+        </div>
+        <button className="bg-white border border-gray-200 p-2 rounded-xl hover:bg-gray-50"><Settings size={20} className="text-gray-600"/></button>
+      </div>
+    </div>
+
+    {/* Filters */}
+    <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
+      {['All Sports', 'Badminton', 'Tennis', 'Basketball', 'Pickleball'].map((filter, i) => (
+        <button key={i} className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${i === 0 ? 'bg-[#0A0A0A] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+          {filter}
+        </button>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Reusing mock tournaments x 2 for demo */}
+      {[...TOURNAMENTS, ...TOURNAMENTS].map((t, i) => (
+        <Card key={i} className="group cursor-pointer h-full flex flex-col">
+          <div className="relative h-40 overflow-hidden bg-gray-200">
+             <img src={t.image} className="w-full h-full object-cover" />
+             <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-xs font-bold">{t.category}</div>
+          </div>
+          <div className="p-5 flex-1 flex flex-col">
+            <h3 className="font-bold text-lg mb-1 line-clamp-1">{t.title}</h3>
+            <p className="text-gray-500 text-xs mb-4 flex items-center"><MapPin size={12} className="mr-1"/> {t.location}</p>
+            <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+              <div className="text-xs text-gray-400">Entry: <span className="text-[#0A0A0A] font-bold">$25</span></div>
+              <button className="text-[#00E18B] text-sm font-bold hover:underline" onClick={() => setView('details')}>View</button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
+
+const TournamentDetailsView = ({ setView }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="pb-20">
+      {/* Banner */}
+      <div className="h-64 md:h-80 bg-gray-900 relative">
+        <img src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600" className="w-full h-full object-cover opacity-40" />
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0A0A0A] to-transparent h-full"></div>
+        <div className="absolute bottom-0 left-0 w-full p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+             <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+               <div>
+                 <div className="flex gap-2 mb-3">
+                    <Badge variant="success">Open for Registration</Badge>
+                    <Badge variant="outline" className="text-white border-white/30">Badminton</Badge>
+                 </div>
+                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Neon Smash Open 2025</h1>
+                 <p className="text-gray-300 flex items-center gap-4 text-sm md:text-base">
+                   <span className="flex items-center"><Calendar size={16} className="mr-2"/> Oct 12-14</span>
+                   <span className="flex items-center"><MapPin size={16} className="mr-2"/> Apex Arena, NYC</span>
+                 </p>
+               </div>
+               <Button className="w-full md:w-auto" icon={CheckCircle}>Register Now</Button>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="sticky top-20 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4">
+           <div className="flex space-x-8 overflow-x-auto no-scrollbar">
+             {['Overview', 'Fixtures', 'Bracket', 'Schedule', 'Results'].map((tab) => (
+               <button 
+                 key={tab}
+                 onClick={() => setActiveTab(tab.toLowerCase())}
+                 className={`py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.toLowerCase() ? 'border-[#00E18B] text-[#0A0A0A]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+               >
+                 {tab}
+               </button>
+             ))}
+           </div>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8 min-h-[400px]">
+        {activeTab === 'overview' && (
+           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             <div className="lg:col-span-2 space-y-8">
+               <Card className="p-6">
+                 <h3 className="text-xl font-bold mb-4">About the Event</h3>
+                 <p className="text-gray-600 leading-relaxed">
+                   Join the biggest amateur badminton tournament of the season. Featuring 12 courts, professional lighting, and real-time digital scoring. 
+                   Open to all skill levels with categories ranging from U15 to Masters 55+.
+                 </p>
+               </Card>
+               <Card className="p-6">
+                 <h3 className="text-xl font-bold mb-4">Rules & Format</h3>
+                 <ul className="space-y-2 text-gray-600">
+                   <li className="flex items-start"><div className="w-1.5 h-1.5 rounded-full bg-[#00E18B] mt-2 mr-2"></div>Knockout format with best of 3 sets (21 points).</li>
+                   <li className="flex items-start"><div className="w-1.5 h-1.5 rounded-full bg-[#00E18B] mt-2 mr-2"></div>BWF rules apply for service and fouls.</li>
+                   <li className="flex items-start"><div className="w-1.5 h-1.5 rounded-full bg-[#00E18B] mt-2 mr-2"></div>Players must report 15 mins before match time.</li>
+                 </ul>
+               </Card>
+             </div>
+             <div className="space-y-6">
+                <Card className="p-6 bg-[#F8F9FB] border-none">
+                  <h4 className="font-bold text-gray-900 mb-4">Prize Pool</h4>
+                  <div className="text-3xl font-bold text-[#00E18B] mb-2">$5,000</div>
+                  <p className="text-sm text-gray-500">Total cash prize distributed across top 3 positions in all categories.</p>
+                </Card>
+                <Card className="p-6">
+                  <h4 className="font-bold text-gray-900 mb-4">Organizer</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                    <div>
+                      <div className="font-semibold">NY Badminton Club</div>
+                      <div className="text-xs text-gray-500">Verified Organizer</div>
+                    </div>
+                  </div>
+                </Card>
+             </div>
+           </div>
+        )}
+
+        {activeTab === 'fixtures' && (
+          <div className="space-y-4">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="text-xl font-bold">Matches</h3>
+               <div className="flex gap-2">
+                  <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-medium">All Courts</span>
+                  <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-medium">In Progress</span>
+               </div>
+             </div>
+             {FIXTURES.map((match) => (
+               <Card key={match.id} className="p-0 overflow-hidden flex flex-col md:flex-row">
+                  <div className={`w-full md:w-2 bg-${match.status === 'Live' ? 'green' : 'gray'}-400`}></div>
+                  <div className="p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center justify-between gap-4">
+                     <div className="flex-1 w-full">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-gray-400 uppercase">{match.court} • {match.time}</span>
+                          {match.status === 'Live' && <Badge variant="live">LIVE</Badge>}
+                        </div>
+                        <div className="space-y-2">
+                           <div className="flex justify-between items-center">
+                             <span className={`font-semibold ${match.score !== '0-0' ? 'text-gray-900' : 'text-gray-600'}`}>{match.p1}</span>
+                             <span className="font-mono font-bold text-lg">{match.score.split('-')[0]}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                             <span className={`font-semibold ${match.score !== '0-0' ? 'text-gray-900' : 'text-gray-600'}`}>{match.p2}</span>
+                             <span className="font-mono font-bold text-lg">{match.score.split('-')[1]}</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="w-full md:w-auto border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 flex md:flex-col gap-2">
+                        <Button variant="outline" className="w-full py-2 text-xs" onClick={() => setView('umpire')}>Score</Button>
+                        <Button variant="ghost" className="w-full py-2 text-xs">Details</Button>
+                     </div>
+                  </div>
+               </Card>
+             ))}
+          </div>
+        )}
+
+        {activeTab === 'bracket' && <BracketView />}
+        {activeTab === 'schedule' && <ScheduleView />}
+      </div>
+    </div>
+  );
+};
+
+const BracketView = () => (
+  <div className="overflow-x-auto pb-12">
+    <div className="min-w-[800px] flex justify-between gap-8 px-4">
+      {/* Quarter Finals */}
+      <div className="flex flex-col justify-around gap-8 w-64">
+        <h4 className="text-center font-bold text-gray-400 text-sm uppercase mb-4">Quarter Finals</h4>
+        {[1, 2, 3, 4].map(i => (
+           <div key={i} className="relative">
+              <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm relative z-10">
+                 <div className="flex justify-between text-sm mb-1"><span className="font-semibold">A. Chen</span><span className="text-[#00E18B]">21</span></div>
+                 <div className="flex justify-between text-sm text-gray-500"><span>B. Miller</span><span>19</span></div>
+              </div>
+              {/* Connecting Lines */}
+              <div className={`absolute right-0 top-1/2 w-8 h-[1px] bg-gray-300 translate-x-full`}></div>
+              {i % 2 !== 0 && <div className="absolute right-[-32px] top-1/2 w-[1px] h-[calc(100%+32px)] bg-gray-300"></div>}
+           </div>
+        ))}
+      </div>
+
+      {/* Semi Finals */}
+      <div className="flex flex-col justify-around gap-16 w-64 mt-8">
+        <h4 className="text-center font-bold text-gray-400 text-sm uppercase mb-4">Semi Finals</h4>
+        {[1, 2].map(i => (
+           <div key={i} className="relative">
+              <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm relative z-10">
+                 <div className="flex justify-between text-sm mb-1"><span className="font-semibold">A. Chen</span><span>-</span></div>
+                 <div className="flex justify-between text-sm text-gray-500"><span>J. Doe</span><span>-</span></div>
+              </div>
+              <div className={`absolute right-0 top-1/2 w-8 h-[1px] bg-gray-300 translate-x-full`}></div>
+              {i % 2 !== 0 && <div className="absolute right-[-32px] top-1/2 w-[1px] h-[calc(100%+32px)] bg-gray-300"></div>}
+              <div className="absolute left-0 top-1/2 w-8 h-[1px] bg-gray-300 -translate-x-full"></div>
+           </div>
+        ))}
+      </div>
+
+      {/* Final */}
+      <div className="flex flex-col justify-center w-64 mt-8">
+        <h4 className="text-center font-bold text-[#00E18B] text-sm uppercase mb-4">Grand Final</h4>
+        <div className="relative">
+           <div className="bg-[#0A0A0A] text-white border border-[#00E18B] rounded-xl p-4 shadow-lg relative z-10">
+               <div className="flex justify-between text-sm mb-2"><span className="font-semibold">TBD</span></div>
+               <div className="flex justify-between text-sm text-gray-400"><span>TBD</span></div>
+           </div>
+           <div className="absolute left-0 top-1/2 w-8 h-[1px] bg-gray-300 -translate-x-full"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const ScheduleView = () => (
+  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="grid grid-cols-[80px_1fr_1fr_1fr] border-b border-gray-200 bg-gray-50">
+      <div className="p-4 font-bold text-gray-400 text-xs uppercase">Time</div>
+      <div className="p-4 font-bold text-gray-700 text-sm text-center">Court 1</div>
+      <div className="p-4 font-bold text-gray-700 text-sm text-center">Court 2</div>
+      <div className="p-4 font-bold text-gray-700 text-sm text-center">Court 3</div>
+    </div>
+    <div className="divide-y divide-gray-100">
+      {SCHEDULE_GRID.map((row, i) => (
+        <div key={i} className="grid grid-cols-[80px_1fr_1fr_1fr] min-h-[80px]">
+           <div className="p-4 text-xs font-medium text-gray-500 border-r border-gray-100 flex items-center justify-center">{row.time}</div>
+           {[row.c1, row.c2, row.c3].map((cell, idx) => (
+             <div key={idx} className="p-2 border-r border-gray-100 relative group">
+                {cell ? (
+                  cell.type === 'match' ? (
+                    <div className="w-full h-full bg-emerald-50 border-l-4 border-[#00E18B] p-2 rounded-r-lg cursor-pointer hover:bg-emerald-100 transition-colors">
+                      <div className="text-xs font-bold text-gray-900">{cell.label}</div>
+                      <div className="text-[10px] text-gray-500 mt-1">Est. 30m</div>
+                    </div>
+                  ) : (
+                     <div className="w-full h-full bg-gray-100/50 flex items-center justify-center text-gray-400 text-xs italic rounded-lg border border-dashed border-gray-200">
+                       {cell.label}
+                     </div>
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                     <button className="text-[#00E18B] bg-white shadow-sm border border-gray-200 rounded-full p-1"><Plus size={16}/></button>
+                  </div>
+                )}
+             </div>
+           ))}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const UmpirePanelView = () => {
+  const [unlocked, setUnlocked] = useState(false);
+  const [scores, setScores] = useState({ p1: 0, p2: 0 });
+  const [set, setSet] = useState(1);
+  const [code, setCode] = useState("");
+
+  if (!unlocked) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-2xl border border-gray-100 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Shield className="text-[#0A0A0A]" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-[#0A0A0A] mb-2">Umpire Access</h2>
+          <p className="text-gray-500 mb-8">Enter the 6-digit match code to unlock the scoring panel.</p>
+          
+          <input 
+             type="text" 
+             value={code}
+             onChange={(e) => setCode(e.target.value)}
+             className="w-full text-center text-3xl font-mono tracking-widest py-4 border-b-2 border-gray-200 focus:border-[#00E18B] outline-none bg-transparent mb-8 text-[#0A0A0A]"
+             placeholder="000000"
+             maxLength={6}
+          />
+          
+          <Button className="w-full py-4" onClick={() => code.length === 6 && setUnlocked(true)}>Unlock Match</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-lg mx-auto px-4 py-8">
+      <div className="bg-[#0A0A0A] text-white p-6 rounded-t-3xl flex justify-between items-center">
+        <div>
+           <div className="text-xs text-gray-400 uppercase tracking-widest mb-1">Court 1 • Match 101</div>
+           <div className="font-bold text-xl">Mixed Doubles Final</div>
+        </div>
+        <div className="text-right">
+           <div className="text-2xl font-bold text-[#00E18B]">Set {set}</div>
+        </div>
+      </div>
+      
+      <div className="bg-white shadow-xl rounded-b-3xl overflow-hidden border border-t-0 border-gray-200">
+        {['Team Alpha', 'Team Beta'].map((team, idx) => (
+           <div key={team} className={`p-8 ${idx === 0 ? 'border-b border-gray-100' : ''}`}>
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-2xl font-bold text-gray-900">{team}</h3>
+                 <div className="text-6xl font-bold font-mono text-[#0A0A0A]">
+                   {idx === 0 ? scores.p1 : scores.p2}
+                 </div>
+              </div>
+              <div className="flex gap-4">
+                 <button 
+                   onClick={() => idx === 0 ? setScores(s => ({...s, p1: Math.max(0, s.p1-1)})) : setScores(s => ({...s, p2: Math.max(0, s.p2-1)}))}
+                   className="flex-1 py-4 bg-gray-100 rounded-xl text-gray-600 font-bold hover:bg-gray-200 active:scale-95 transition-transform"
+                 >
+                   -1
+                 </button>
+                 <button 
+                   onClick={() => idx === 0 ? setScores(s => ({...s, p1: s.p1+1})) : setScores(s => ({...s, p2: s.p2+1}))}
+                   className="flex-[2] py-4 bg-[#00E18B] rounded-xl text-[#0A0A0A] font-bold text-xl hover:brightness-95 active:scale-95 transition-transform shadow-lg shadow-emerald-200"
+                 >
+                   +1 Point
+                 </button>
+              </div>
+           </div>
+        ))}
+        
+        <div className="p-6 bg-gray-50 flex gap-4">
+           <Button variant="outline" className="flex-1 border-gray-300 bg-white" onClick={() => { setScores({p1:0, p2:0}); setSet(s => s+1); }}>Next Set</Button>
+           <Button className="flex-1 bg-[#0A0A0A] text-white">End Match</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminDashboardView = () => (
+  <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+     {/* Sidebar */}
+     <div className="lg:col-span-1 space-y-2">
+        {['Dashboard', 'Players', 'Fixtures', 'Courts', 'Umpires', 'Settings'].map((item, i) => (
+          <button key={item} className={`w-full text-left px-4 py-3 rounded-lg font-medium flex items-center ${i === 0 ? 'bg-[#0A0A0A] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <List size={18} className="mr-3" />
+            {item}
+          </button>
+        ))}
+     </div>
+
+     {/* Main Content */}
+     <div className="lg:col-span-3 space-y-8">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[{ l: 'Total Players', v: 128 }, { l: 'Matches', v: 64 }, { l: 'Courts', v: 12 }, { l: 'Umpires', v: 8 }].map((kpi, i) => (
+            <Card key={i} className="p-4">
+              <div className="text-2xl font-bold text-[#0A0A0A]">{kpi.v}</div>
+              <div className="text-xs text-gray-500 uppercase">{kpi.l}</div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-4">
+          <Button icon={Play}>Generate Fixtures</Button>
+          <Button variant="outline" icon={Calendar}>Auto-Schedule</Button>
+        </div>
+
+        {/* Recent Registrations Table */}
+        <Card className="p-0 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+             <h3 className="font-bold text-lg">Recent Registrations</h3>
+             <Button variant="ghost" className="text-xs">View All</Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Name</th>
+                  <th className="px-6 py-3 font-medium">Category</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
+                  <th className="px-6 py-3 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {[1,2,3,4].map((_, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium text-gray-900">Player {i + 1}</td>
+                    <td className="px-6 py-4 text-gray-500">Mens Singles</td>
+                    <td className="px-6 py-4"><Badge variant="success">Paid</Badge></td>
+                    <td className="px-6 py-4 text-gray-500">Oct 12</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+     </div>
+  </div>
+);
+
+// --- MAIN LAYOUT ---
+
+export default function XthleteArena() {
+  const [activeView, setActiveView] = useState('landing'); // landing, tournaments, details, umpire, admin, schedule, login
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Scroll to top on view change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeView]);
+
+  return (
+    <div className={`min-h-screen font-sans text-[#1B1B1F] bg-[${BRAND.bg}] selection:bg-[#00E18B] selection:text-[#0A0A0A]`}>
+      <Navbar 
+        setView={setActiveView} 
+        activeView={activeView}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+
+      <main className="animate-in fade-in duration-500">
+        {activeView === 'landing' && <LandingView setView={setActiveView} />}
+        {activeView === 'tournaments' && <TournamentsView setView={setActiveView} />}
+        {activeView === 'details' && <TournamentDetailsView setView={setActiveView} />}
+        {activeView === 'schedule' && <div className="max-w-7xl mx-auto p-4 py-12"><h1 className="text-3xl font-bold mb-6">Court Schedule</h1><ScheduleView /></div>}
+        {activeView === 'umpire' && <UmpirePanelView />}
+        {activeView === 'admin' && <AdminDashboardView />}
+        {activeView === 'login' && <LoginView setView={setActiveView} />}
+      </main>
+
+      <footer className="bg-[#0A0A0A] text-gray-400 py-16 mt-20 border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center mb-6">
+              <div className="w-8 h-8 bg-[#00E18B] rounded-md flex items-center justify-center mr-2">
+                <Trophy className="text-[#0A0A0A]" size={18} />
+              </div>
+              <span className="text-2xl font-bold text-white">Xthlete<span className="text-[#00E18B]">.</span></span>
+            </div>
+            <p className="max-w-sm leading-relaxed">
+              Empowering sports communities with professional-grade tournament management tools. 
+              Built for athletes, organizers, and fans.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-white font-bold mb-6 uppercase tracking-wider text-sm">Platform</h4>
+            <ul className="space-y-4">
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Tournaments</a></li>
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Clubs</a></li>
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Pricing</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white font-bold mb-6 uppercase tracking-wider text-sm">Support</h4>
+            <ul className="space-y-4">
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Help Center</a></li>
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Contact Us</a></li>
+              <li><a href="#" className="hover:text-[#00E18B] transition-colors">Privacy Policy</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
+          <div className="text-sm">&copy; 2025 Xthlete Inc. All rights reserved.</div>
+          <div className="flex space-x-6 mt-4 md:mt-0">
+             <span className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-[#00E18B] hover:text-[#0A0A0A] transition-all cursor-pointer">X</span>
+             <span className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-[#00E18B] hover:text-[#0A0A0A] transition-all cursor-pointer">In</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

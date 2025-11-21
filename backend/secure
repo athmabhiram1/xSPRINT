@@ -1,0 +1,59 @@
+// ==========================================
+// 🔒 MODULE 3: SECURE MATCH CODES
+// ==========================================
+
+/**
+ * Generates a unique, secure match code and stores it in Firestore
+ */
+async function generateMatchCode(fixtureId) {
+  try {
+    // Generate a random 6-digit numeric code
+    const code = crypto.randomInt(100000, 999999).toString();
+    
+    // Store in Firestore with expiration
+    const codeDoc = {
+      code: code,
+      fixtureId: fixtureId,
+      active: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() + 24 * 60 * 60 * 1000) // Expires in 24 hours
+      )
+    };
+
+    await db.collection('matchCodes').doc(fixtureId).set(codeDoc);
+    
+    console.log(`[SECURE LOG] Generated Code for ${fixtureId}: ${code}`);
+    return code;
+  } catch (error) {
+    console.error('Error generating match code:', error);
+    throw error;
+  }
+}
+
+/**
+ * Verifies if the provided code matches the stored code for the fixture
+ */
+async function verifyMatchCode(fixtureId, inputCode) {
+  try {
+    const codeDoc = await db.collection('matchCodes').doc(fixtureId).get();
+    
+    if (!codeDoc.exists) {
+      return { valid: false, msg: "No code generated for this match" };
+    }
+    
+    const data = codeDoc.data();
+    if (!data.active) {
+      return { valid: false, msg: "Match is closed/locked" };
+    }
+    
+    if (data.code === inputCode) {
+      return { valid: true, msg: "Access Granted" };
+    }
+    
+    return { valid: false, msg: "Invalid Code" };
+  } catch (error) {
+    console.error('Error verifying match code:', error);
+    return { valid: false, msg: "Verification failed" };
+  }
+}

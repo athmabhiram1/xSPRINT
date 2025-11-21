@@ -16,6 +16,7 @@ const mockTournaments = [
     location: "Mumbai, India",
     date: "Dec 15-20, 2024",
     category: "Pro",
+    sport: "Badminton",
     participants: 128,
   },
   {
@@ -25,6 +26,7 @@ const mockTournaments = [
     location: "Delhi, India",
     date: "Dec 22-28, 2024",
     category: "Semi-Pro",
+    sport: "Basketball",
     participants: 64,
   },
   {
@@ -34,6 +36,7 @@ const mockTournaments = [
     location: "Bangalore, India",
     date: "Dec 25-27, 2024",
     category: "Open",
+    sport: "Chess",
     participants: 256,
   },
   {
@@ -43,6 +46,7 @@ const mockTournaments = [
     location: "Chennai, India",
     date: "Jan 5-10, 2025",
     category: "Amateur",
+    sport: "Pickleball",
     participants: 96,
   },
   {
@@ -52,6 +56,7 @@ const mockTournaments = [
     location: "Pune, India",
     date: "Jan 12-20, 2025",
     category: "Pro",
+    sport: "Cricket",
     participants: 48,
   },
   {
@@ -61,23 +66,25 @@ const mockTournaments = [
     location: "Hyderabad, India",
     date: "Jan 15-25, 2025",
     category: "Semi-Pro",
+    sport: "Football",
     participants: 80,
   },
 ]
 
 const categories = ["All", "Badminton", "Basketball", "Cricket", "Football", "Chess", "Pickleball"]
-const levels = ["All", "U15", "U18", "Open", "Women's", "Doubles"]
 
 export default function TournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
-  const [selectedLevel, setSelectedLevel] = useState("All")
 
   const filteredTournaments = mockTournaments.filter((tournament) => {
     const matchesSearch =
       tournament.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tournament.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || tournament.category === selectedCategory
+    
+    // Fixed logic: Check if selectedCategory matches the tournament's sport
+    const matchesCategory = selectedCategory === "All" || tournament.sport === selectedCategory
+    
     return matchesSearch && matchesCategory
   })
 
@@ -94,32 +101,34 @@ export default function TournamentsPage() {
       </section>
 
       {/* Search & Filters */}
-      <section className="bg-background border-b border-border sticky top-16 z-40">
+      <section className="bg-background border-b border-border sticky top-16 z-40 shadow-sm">
         <div className="container-max py-6">
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
               <Input
                 placeholder="Search tournaments or location..."
-                className="pl-10"
+                className="pl-10 bg-muted/30"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Button variant="outline" className="gap-2 bg-transparent">
               <Filter size={20} />
-              Filters
+              More Filters
             </Button>
           </div>
 
           {/* Category Tags */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat ? "bg-primary text-secondary" : "bg-muted text-foreground hover:bg-border"
+                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
+                  selectedCategory === cat 
+                    ? "bg-primary text-secondary border-primary shadow-md shadow-primary/20" 
+                    : "bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
                 }`}
               >
                 {cat}
@@ -130,7 +139,7 @@ export default function TournamentsPage() {
       </section>
 
       {/* Tournament Grid */}
-      <section className="section-spacing">
+      <section className="section-spacing bg-muted/30">
         <div className="container-max">
           {filteredTournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,8 +148,17 @@ export default function TournamentsPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground text-lg">No tournaments found matching your criteria</p>
+            <div className="text-center py-20 bg-card rounded-xl border border-dashed border-border">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-bold mb-2">No tournaments found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
+              <Button 
+                variant="link" 
+                onClick={() => {setSearchTerm(""); setSelectedCategory("All")}}
+                className="mt-2 text-primary"
+              >
+                Clear all filters
+              </Button>
             </div>
           )}
         </div>

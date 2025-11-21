@@ -1,0 +1,79 @@
+// ==========================================
+// 🚀 API ROUTES
+// ==========================================
+
+// 1. POST /api/players/register
+app.post('/api/players/register', async (req, res) => {
+  try {
+    const { name, clubId, events } = req.body;
+    
+    if (!name || !clubId || !events) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Check for duplicate names in same club
+    const existingPlayers = await db.collection('players')
+      .where('name', '==', name)
+      .where('clubId', '==', clubId)
+      .get();
+    
+    if (!existingPlayers.empty) {
+      return res.status(400).json({ error: "Player with this name already exists in this club" });
+    }
+
+    // Generate unique player ID
+    const playerId = `PLR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create player document
+    const playerData = {
+      id: playerId,
+      name: name,
+      clubId: clubId,
+      events: events,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    await db.collection('players').doc(playerId).set(playerData);
+    
+    res.json({ 
+      success: true, 
+      message: "Player registered successfully",
+      playerId: playerId
+    });
+  } catch (error) {
+    console.error('Error registering player:', error);
+    res.status(500).json({ error: "Failed to register player" });
+  }
+});
+
+// 2. POST /api/clubs/register
+app.post('/api/clubs/register', async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Club name is required" });
+    }
+
+    // Generate unique club ID
+    const clubId = `CLB_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create club document
+    const clubData = {
+      id: clubId,
+      name: name,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    await db.collection('clubs').doc(clubId).set(clubData);
+    
+    res.json({ 
+      success: true, 
+      message: "Club registered successfully",
+      clubId: clubId
+    });
+  } catch (error) {
+    console.error('Error registering club:', error);
+    res.status(500).json({ error: "Failed to register club" });
+  }
+});

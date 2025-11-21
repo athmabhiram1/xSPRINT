@@ -1,0 +1,66 @@
+// 3. POST /api/fixtures/generate
+app.post('/api/fixtures/generate', async (req, res) => {
+  try {
+    const { playerIds, eventId } = req.body;
+    
+    if (!playerIds || !eventId) {
+      return res.status(400).json({ error: "Player IDs and Event ID are required" });
+    }
+
+    const fixtures = await generateKnockoutFixtures(playerIds, eventId);
+    
+    res.json({ 
+      success: true, 
+      count: fixtures.length, 
+      fixtures 
+    });
+  } catch (error) {
+    console.error('Error generating fixtures:', error);
+    res.status(500).json({ error: "Failed to generate fixtures" });
+  }
+});
+
+// 4. POST /api/schedule
+app.post('/api/schedule', async (req, res) => {
+  try {
+    const { eventId, courtIds, startTime } = req.body;
+    
+    if (!eventId || !courtIds || !startTime) {
+      return res.status(400).json({ error: "Event ID, Court IDs, and Start Time are required" });
+    }
+
+    const schedule = await scheduleMatches(eventId, courtIds, startTime);
+    
+    res.json({ 
+      success: true, 
+      count: schedule.length, 
+      schedule 
+    });
+  } catch (error) {
+    console.error('Error scheduling matches:', error);
+    res.status(500).json({ error: "Failed to schedule matches" });
+  }
+});
+
+// 5. POST /api/match-code/generate
+app.post('/api/match-code/generate', async (req, res) => {
+  try {
+    const { fixtureId } = req.body;
+    
+    if (!fixtureId) {
+      return res.status(400).json({ error: "Fixture ID is required" });
+    }
+
+    const code = await generateMatchCode(fixtureId);
+    
+    // Don't return the code in response for security
+    res.json({ 
+      success: true, 
+      message: "Match code generated successfully",
+      fixtureId: fixtureId
+    });
+  } catch (error) {
+    console.error('Error generating match code:', error);
+    res.status(500).json({ error: "Failed to generate match code" });
+  }
+});

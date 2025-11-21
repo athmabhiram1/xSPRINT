@@ -1,0 +1,82 @@
+// ==========================================
+// 🧠 MODULE 1: SMART FIXTURE ENGINE
+// ==========================================
+
+/**
+ * Generates a Knockout Draw with "Same Club Avoidance" logic.
+ * Uses an advanced algorithm to maximize distance between club members.
+ */
+async function generateKnockoutFixtures(playerIds, eventId) {
+  try {
+    // Fetch player details from Firestore
+    const playerPromises = playerIds.map(id => db.collection('players').doc(id).get());
+    const playerDocs = await Promise.all(playerPromises);
+    
+    const players = playerDocs
+      .filter(doc => doc.exists)
+      .map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    if (players.length < 2) return [];
+
+    // 1. Club Avoidance Sort (Heuristic)
+    const playersByClub = {};
+    players.forEach(p => {
+      if (!playersByClub[p.clubId]) playersByClub[p.clubId] = [];
+      playersByClub[p.clubId].push(p);
+    });
+
+    // Interleave players from different clubs to maximize distance
+    let sortedPlayers = [];
+    const clubKeys = Object.keys(playersByClub);
+    const maxCount = Math.max(...clubKeys.map(c => playersByClub[c].length));
+
+    for (let i = 0; i < maxCount; i++) {
+      for (let club of clubKeys) {
+        if (playersByClub[club][i]) {
+          sortedPlayers.push(playersByClub[club][i]);
+        }
+      }
+    }
+
+    // 2. Calculate Bracket Size (Next power of 2)
+    const totalPlayers = sortedPlayers.length;
+    const bracketSize = Math.pow(2, Math.ceil(Math.log2(totalPlayers)));
+    const byesCount = bracketSize - totalPlayers;
+
+    let fixtures = [];
+    let matchIdCounter = 100;
+
+    // 3. Assign Matches (Round 1)
+    for (let i = 0; i < bracketSize / 2; i++) {
+      const p1 = sortedPlayers[i] || { id: 'BYE', name: 'BYE' };
+      const p2Index = bracketSize - 1 - i;
+      const p2 = (p2Index < totalPlayers) ? sortedPlayers[p2Index] : { id: 'BYE', name: 'BYE' };
+
+      const fixture = {
+        id: `FIX_${eventId}_${matchIdCounter++}`,
+        eventId: eventId,
+        p1: p1,
+        p2: p2,
+        round: 1,
+        status: (p1.id === 'BYE' || p2.id === 'BYE') ? 'BYE' : 'PENDING',
+        winner: (p2.id === 'BYE') ? p1.id : (p1.id === 'BYE' ? p2.id : null),
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      fixtures.push(fixture);
+    }
+
+    // 4. Save fixtures to Firestore
+    const batch = db.batch();
+    fixtures.forEach(fixture => {
+      const fixtureRef = db.collection('fixtures').doc(fixture.id);
+      batch.set(fixtureRef, fixture);
+    });
+    await batch.commit();
+
+    return fixtures;
+  } catch (error) {
+    console.error('Error generating fixtures:', error);
+    throw error;
+  }
+}

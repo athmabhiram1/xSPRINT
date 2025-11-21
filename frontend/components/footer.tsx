@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Twitter, Linkedin, Instagram } from "lucide-react"
+import { Twitter, Linkedin, Instagram, Trophy } from "lucide-react"
 
 export function Footer() {
   return (
@@ -8,12 +8,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-secondary font-bold">X</span>
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center transform rotate-3">
+                <Trophy className="text-secondary" size={20} />
               </div>
-              <span className="font-heading font-bold text-lg">Xthlete</span>
+              <span className="font-heading font-bold text-xl">xSPRINT<span className="text-primary">.</span></span>
             </div>
-            <p className="text-sm text-gray-400">Smart tournaments for the modern era</p>
+            <p className="text-sm text-gray-400">Empowering sports communities with professional-grade tournament management. Built for athletes, organizers, and fans.</p>
           </div>
 
           <div>
@@ -75,7 +75,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-          <p>&copy; 2025 Xthlete Arena. All rights reserved.</p>
+          <p>&copy; 2025 xSPRINT Inc. All rights reserved.</p>
           <div className="flex gap-4 mt-4 md:mt-0">
             <Link href="#" className="hover:text-primary transition-colors">
               Privacy

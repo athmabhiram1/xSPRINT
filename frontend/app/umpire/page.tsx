@@ -12,6 +12,7 @@ export default function UmpirePage() {
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [scoreA, setScoreA] = useState(0)
   const [scoreB, setScoreB] = useState(0)
+  const [currentSet, setCurrentSet] = useState(1)
 
   const handleUnlock = () => {
     if (matchCode === "123456") {
@@ -21,6 +22,12 @@ export default function UmpirePage() {
 
   const handleSubmit = () => {
     alert(`Match result submitted: ${scoreA} - ${scoreB}`)
+  }
+
+  const handleNextSet = () => {
+    setScoreA(0)
+    setScoreB(0)
+    setCurrentSet(currentSet + 1)
   }
 
   return (
@@ -62,7 +69,12 @@ export default function UmpirePage() {
             <div className="bg-card rounded-lg border border-border p-8 space-y-8">
               {/* Match Info */}
               <div className="bg-muted rounded-lg p-6">
-                <h3 className="font-heading font-bold mb-4">Match Details</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-heading font-bold">Match Details</h3>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">Set {currentSet}</div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Player A</p>
@@ -96,19 +108,22 @@ export default function UmpirePage() {
                     </div>
 
                     <div className="bg-primary/10 rounded-lg p-6 text-center">
-                      <p className="text-5xl font-bold text-primary">{player.score}</p>
+                      <p className="text-6xl font-bold font-mono text-primary">{player.score}</p>
                     </div>
 
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        className="flex-1 bg-transparent"
+                        className="flex-1 bg-transparent text-xl"
                         onClick={() => player.setScore(Math.max(0, player.score - 1))}
                       >
-                        <Minus size={20} />
+                        -1
                       </Button>
-                      <Button className="flex-1" onClick={() => player.setScore(player.score + 1)}>
-                        <Plus size={20} />
+                      <Button 
+                        className="flex-[2] text-xl shadow-lg" 
+                        onClick={() => player.setScore(player.score + 1)}
+                      >
+                        +1
                       </Button>
                     </div>
                   </div>
@@ -116,13 +131,21 @@ export default function UmpirePage() {
               </div>
 
               {/* Actions */}
-              <div className="space-y-3">
-                <Button size="lg" className="w-full" onClick={handleSubmit}>
-                  <CheckCircle size={20} />
-                  Submit Match Result
-                </Button>
+              <div className="space-y-3 pt-4 border-t border-border">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="bg-transparent" 
+                    onClick={handleNextSet}
+                  >
+                    Next Set
+                  </Button>
+                  <Button onClick={handleSubmit}>
+                    <CheckCircle size={20} className="mr-2" />
+                    End Match
+                  </Button>
+                </div>
                 <Button
-                  size="lg"
                   variant="outline"
                   className="w-full bg-transparent"
                   onClick={() => {
@@ -130,6 +153,7 @@ export default function UmpirePage() {
                     setMatchCode("")
                     setScoreA(0)
                     setScoreB(0)
+                    setCurrentSet(1)
                   }}
                 >
                   Back to Code Entry

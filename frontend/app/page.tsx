@@ -83,10 +83,10 @@ export default function Home() {
         </div>
 
         <div className="relative container-max py-32 text-center text-white">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
             Smart Tournaments.
             <br />
-            <span className="text-primary">Real-Time Results.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-teal-400">Real-Time Results.</span>
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             A professional tournament experience for clubs, players, and organizers. Manage matches, track results, and
@@ -169,7 +169,7 @@ export default function Home() {
       <section className="section-spacing bg-background">
         <div className="container-max">
           <div className="text-center mb-12">
-            <h2 className="mb-4">Why Choose Xthlete Arena</h2>
+            <h2 className="mb-4">Why Choose xSPRINT</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Built for the modern competitive athlete and tournament organizer
             </p>
@@ -197,7 +197,7 @@ export default function Home() {
         <div className="container-max text-center">
           <h2 className="text-white mb-6">Ready to Transform Your Tournament Experience?</h2>
           <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of athletes, clubs, and organizers already using Xthlete Arena
+            Join thousands of athletes, clubs, and organizers already using xSPRINT to power their tournaments
           </p>
           <Button
             size="lg"

@@ -1,12 +1,31 @@
 "use client"
 
 import Link from "next/link"
-import { Menu, X } from "lucide-react"
-import { useState } from "react"
+import { Menu, X, User, LogOut } from "lucide-react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { usePathname, useRouter } from "next/navigation"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Check login status
+    const role = localStorage.getItem("user_role")
+    setIsLoggedIn(!!role)
+    setIsAdmin(role === "admin")
+  }, [pathname])
+
+  const handleLogout = () => {
+    localStorage.removeItem("user_role")
+    setIsLoggedIn(false)
+    setIsAdmin(false)
+    router.push("/")
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,18 +47,37 @@ export function Navbar() {
           <Link href="/leaderboard" className="text-sm font-medium hover:text-primary transition-colors">
             Leaderboard
           </Link>
-          <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
-            About
-          </Link>
+          {isAdmin && (
+             <Link href="/admin" className="text-sm font-medium text-primary transition-colors">
+             Admin Panel
+           </Link>
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/login">Sign In</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/register">Register</Link>
-          </Button>
+          {isLoggedIn ? (
+             <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+             </div>
+          ) : (
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Register</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
@@ -59,16 +97,26 @@ export function Navbar() {
             <Link href="/leaderboard" className="text-sm font-medium hover:text-primary">
               Leaderboard
             </Link>
-            <Link href="/about" className="text-sm font-medium hover:text-primary">
-              About
-            </Link>
+            {isAdmin && (
+               <Link href="/admin" className="text-sm font-medium text-primary">
+               Admin Panel
+             </Link>
+            )}
             <div className="flex flex-col gap-2 pt-2">
-              <Button variant="outline" asChild className="w-full bg-transparent">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link href="/register">Register</Link>
-              </Button>
+              {isLoggedIn ? (
+                 <Button variant="outline" onClick={handleLogout} className="w-full">
+                    Logout
+                 </Button>
+              ) : (
+                <>
+                  <Button variant="outline" asChild className="w-full bg-transparent">
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                  <Button asChild className="w-full">
+                    <Link href="/register">Register</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
