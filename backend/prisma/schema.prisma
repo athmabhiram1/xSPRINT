@@ -1,140 +1,165 @@
-// Prisma schema for Xthlete Smart Tournament Engine
-
-datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")   // Needed for Neon migrations
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  UMPIRE
+  VIEWER
+}
+
 enum MatchStatus {
-  PENDING
-  SCHEDULED
-  LIVE
-  COMPLETED
+  PENDING     // Waiting for players
+  READY       // Players ready, waiting for schedule
+  SCHEDULED   // Time assigned
+  ONGOING     // Live
+  COMPLETED   // Done
+  CANCELLED
 }
 
-enum NextMatchSlot {
-  A
-  B
-}
-
-model Club {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  players  Player[]
-
-  @@map("clubs")
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(VIEWER)
+  
+  // Relations
+  umpiredMatches Match[] @relation("Umpire")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Player {
-  id               String     @id @default(uuid())
-  fullName         String
-  clubId           String?
-  club             Club?      @relation(fields: [clubId], references: [id])
-  registrations    Registration[]
-  matchesAsPlayerA Match[]     @relation("playerA")
-  matchesAsPlayerB Match[]     @relation("playerB")
-  matchesWon       Match[]     @relation("winner")
+  id            String         @id @default(uuid())
+  name          String
+  weight        String?        // Weight category (e.g., "Lightweight", "Heavyweight")
+  category      String?        // Competition category (e.g., "U15", "U18", "Senior")
+  description   String?        // Additional player details
+  clubId        String?
+  club          Club?          @relation(fields: [clubId], references: [id])
+  registrations Registration[]
+  
+  matchesAsA    Match[]        @relation("PlayerA")
+  matchesAsB    Match[]        @relation("PlayerB")
+  winnerOf      Match[]        @relation("Winner")
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
 
-  createdAt        DateTime   @default(now())
-
-  @@map("players")
+model Club {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  players Player[]
 }
 
 model Tournament {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  startTime DateTime?
-  courts    String[]   // ["Court 1", "Court 2"]
-
+  startDate DateTime
+  endDate   DateTime
   events    Event[]
-  matches   Match[]
-
-  @@map("tournaments")
+  courts    Court[]
 }
 
 model Event {
-  id            String     @id @default(uuid())
-  tournamentId  String
-  name          String
-  format        String     // "knockout" | "round_robin"
-
-  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  id           String         @id @default(uuid())
+  name         String
+  tournamentId String
+  tournament   Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches      Match[]
+  rounds       Int?           // Total rounds depth
   registrations Registration[]
-  matches       Match[]
-
-  @@map("events")
 }
 
 model Registration {
   id        String   @id @default(uuid())
   eventId   String
-  playerId  String
-
   event     Event    @relation(fields: [eventId], references: [id])
+  playerId  String
   player    Player   @relation(fields: [playerId], references: [id])
-
+  seed      Int?
+  
   @@unique([eventId, playerId])
+}
 
-  @@map("registrations")
+model Court {
+  id           String          @id @default(uuid())
+  name         String
+  tournamentId String
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id])
+  schedule     ScheduleBlock[]
 }
 
 model Match {
-  id             String       @id @default(uuid())
-  tournamentId   String
-  eventId        String
+  id            String   @id @default(uuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  round         Int
+  matchNumber   Int      // 1-indexed within the round
+  
+  playerAId     String?
+  playerA       Player?  @relation("PlayerA", fields: [playerAId], references: [id])
+  
+  playerBId     String?
+  playerB       Player?  @relation("PlayerB", fields: [playerBId], references: [id])
+  
+  winnerId      String?
+  winner        Player?  @relation("Winner", fields: [winnerId], references: [id])
+  
+  // Umpire Assignment (Critical for Security)
+  umpireId      String?
+  umpire        User?    @relation("Umpire", fields: [umpireId], references: [id])
 
-  round          Int
-  indexInRound   Int
+  // Scoring & Metadata
+  score         Json?    // e.g. { sets: [{a: 21, b: 19}, {a: 15, b: 21}, {a: 21, b: 10}] }
+  metadata      Json?    // { bestOf: 3, category: "U15" }
+  status        MatchStatus @default(PENDING)
+  
+  // Propagation Logic
+  nextMatchId   String?
+  nextMatch     Match?   @relation("NextMatch", fields: [nextMatchId], references: [id])
+  previousMatches Match[] @relation("NextMatch")
 
-  playerAId      String?
-  playerA        Player?      @relation("playerA", fields: [playerAId], references: [id])
-
-  playerBId      String?
-  playerB        Player?      @relation("playerB", fields: [playerBId], references: [id])
-
-  winnerId       String?
-  winner         Player?      @relation("winner", fields: [winnerId], references: [id])
-
-  court          String?
-  scheduledStart DateTime?
-  actualStart    DateTime?
-  actualEnd      DateTime?
-
-  nextMatchId     String?
-  nextMatch       Match?        @relation("nextMatch", fields: [nextMatchId], references: [id])
-  previousMatches Match[]       @relation("nextMatch")
-
-  nextMatchSlot  NextMatchSlot?
-
-  secrets        MatchSecret?
-
-  status         MatchStatus  @default(PENDING)
-
-  event          Event        @relation(fields: [eventId], references: [id])
-  tournament     Tournament   @relation(fields: [tournamentId], references: [id])
-
-  @@index([eventId, round])
-  @@index([tournamentId, round])
-  @@index([playerAId])
-  @@index([playerBId])
-  @@index([nextMatchId])
-
-  @@map("matches")
+  matchCode     MatchCode?
+  schedule      ScheduleBlock?
+  
+  startTime     DateTime? // Denormalized for quick access
+  endTime       DateTime?
+  
+  updatedAt     DateTime @updatedAt
 }
 
-model MatchSecret {
-  matchId        String    @id
-  match          Match     @relation(fields: [matchId], references: [id])
+model MatchCode {
+  id        String   @id @default(uuid())
+  matchId   String   @unique
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  codeHash  String
+  isActive  Boolean  @default(true)
+  expiresAt DateTime
+}
 
-  codeHash       String
-  assignedUmpire String
-  isValid        Boolean   @default(true)
-  createdAt      DateTime  @default(now())
+model ScheduleBlock {
+  id        String   @id @default(uuid())
+  matchId   String   @unique
+  match     Match    @relation(fields: [matchId], references: [id])
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id])
+  startTime DateTime
+  endTime   DateTime
+}
 
-  @@map("match_secrets")
+model AdminLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String
+  createdAt DateTime @default(now())
 }
