@@ -39,9 +39,11 @@ model User {
 model Player {
   id            String         @id @default(uuid())
   name          String
-  weight        String?        // Weight category (e.g., "Lightweight", "Heavyweight")
-  category      String?        // Competition category (e.g., "U15", "U18", "Senior")
-  description   String?        // Additional player details
+  email         String?        @unique
+  gender        String?
+  weight        String?
+  category      String?
+  description   String?
   clubId        String?
   club          Club?          @relation(fields: [clubId], references: [id])
   registrations Registration[]
@@ -73,10 +75,15 @@ model Event {
   id           String         @id @default(uuid())
   name         String
   tournamentId String
+  sport        String         @default("Badminton")
+  type         String         @default("KNOCKOUT") // KNOCKOUT or ROUND_ROBIN
+  gender       String?        // Men's, Women's, Mixed
+  category     String?        // U15, U18, Senior, etc.
   tournament   Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   matches      Match[]
-  rounds       Int?           // Total rounds depth
+  rounds       Int?
   registrations Registration[]
+  createdAt    DateTime       @default(now())
 }
 
 model Registration {

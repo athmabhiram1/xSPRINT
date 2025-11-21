@@ -2,11 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import { json } from 'body-parser';
 
-// Import Routes (Placeholders for now)
-// import authRoutes from './routes/auth.routes';
-import fixtureRoutes from './routes/fixture.routes';
+// Import Routes
 import matchRoutes from './routes/match.routes';
 import playerRoutes from './routes/player.routes';
+import fixtureRoutes from './routes/fixture.routes';
+import tournamentRoutes from './routes/tournament.routes';
+import eventRoutes from './routes/event.routes';
+import clubRoutes from './routes/club.routes';
 
 export const app = express();
 
@@ -19,10 +21,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes Registration
-// app.use('/api/auth', authRoutes);
-app.use('/api/fixtures', fixtureRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/clubs', clubRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/fixtures', fixtureRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
