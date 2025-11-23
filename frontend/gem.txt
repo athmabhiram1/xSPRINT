@@ -1,0 +1,1021 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Calendar, Trophy, Users, Activity, ChevronRight, 
+  MapPin, Clock, Shield, LogOut, Settings, Play,
+  Menu, X, CheckCircle, AlertTriangle, BarChart3, Shuffle,
+  Sparkles, Bot, Loader2, MessageSquare, User, Filter,
+  Table, GitMerge, List, Grid, Plus, Ticket, Lightbulb, Check, ArrowRight, FileText, Medal, TrendingUp, ArrowUp, ArrowDown, Minus
+} from 'lucide-react';
+
+// --- Types (Updated) ---
+type View = 'LANDING' | 'SPORTS_DIRECTORY' | 'SPORT_DETAIL' | 'FIXTURES' | 'SCHEDULE' | 'LEADERBOARD' | 'LOGIN' | 'ADMIN' | 'UMPIRE' | 'PLAYER_DASHBOARD';
+type UserRole = 'GUEST' | 'ADMIN' | 'UMPIRE' | 'PLAYER';
+type Format = 'knockout' | 'roundrobin' | 'swiss' | 'double_elimination';
+
+// ... (Existing Interfaces: Sport, Player, Match, Court, LogEntry - Unchanged) ...
+interface Sport {
+  id: string;
+  name: string;
+  icon: string;
+  category: 'Racquet' | 'Team' | 'Indoor';
+  description: string;
+  registrationOpen: boolean;
+  maxPlayers: number;
+  registeredCount: number;
+}
+
+interface Player {
+  id: string;
+  name: string;
+  club: string;
+  email?: string;
+  sportId?: string;
+  seed?: number;
+  stats?: { p: number; w: number; l: number; pts: number; setDiff: number };
+}
+
+interface Match {
+  id: string;
+  sportId: string;
+  round: number;
+  matchNumber?: number; 
+  playerA: Player;
+  playerB: Player;
+  status: 'PENDING' | 'SCHEDULED' | 'ONGOING' | 'COMPLETED';
+  startTime?: string;
+  endTime?: string;
+  courtId?: string;
+  winnerId?: string;
+  score?: string;
+  nextMatchId?: string;
+  bracketType?: 'WINNERS' | 'LOSERS'; 
+  groupId?: string;
+}
+
+interface Court {
+  id: string;
+  name: string;
+  sportId: string;
+}
+
+interface LogEntry {
+  id: string;
+  timestamp: Date;
+  action: string;
+  details: string;
+  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+}
+
+// --- New Interface for Leaderboard ---
+interface LeaderboardEntry {
+  rank: number;
+  playerId: string;
+  name: string;
+  club: string;
+  sportId: string;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  points: number;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+// --- Enhanced Real-World Data (Unchanged) ---
+const SPORTS_DATA: Sport[] = [
+  { id: 'badminton', name: 'Badminton', icon: '🏸', category: 'Racquet', description: 'Men\'s & Women\'s Singles Championship', registrationOpen: true, maxPlayers: 32, registeredCount: 28 },
+  { id: 'tennis', name: 'Tennis', icon: '🎾', category: 'Racquet', description: 'Open Court Championship 2025', registrationOpen: true, maxPlayers: 16, registeredCount: 12 },
+  { id: 'tt', name: 'Table Tennis', icon: '🏓', category: 'Indoor', description: 'Fast-paced ping pong action', registrationOpen: true, maxPlayers: 64, registeredCount: 45 },
+  { id: 'squash', name: 'Squash', icon: 'wall', category: 'Racquet', description: 'High intensity glass court series', registrationOpen: false, maxPlayers: 16, registeredCount: 16 },
+  { id: 'basketball', name: 'Basketball', icon: '🏀', category: 'Team', description: '3v3 Street Hoop Challenge', registrationOpen: true, maxPlayers: 16, registeredCount: 8 },
+  { id: 'cricket', name: 'Cricket', icon: '🏏', category: 'Team', description: 'T10 Box Cricket League', registrationOpen: true, maxPlayers: 10, registeredCount: 6 },
+  { id: 'football', name: 'Football', icon: '⚽', category: 'Team', description: '5-a-side Futsal Tournament', registrationOpen: true, maxPlayers: 12, registeredCount: 10 },
+  { id: 'chess', name: 'Chess', icon: '♟️', category: 'Indoor', description: 'Grandmaster Blitz Open', registrationOpen: true, maxPlayers: 128, registeredCount: 98 },
+];
+
+const MOCK_COURTS: Court[] = [
+  { id: 'c1', name: 'B-Court 1', sportId: 'badminton' },
+  { id: 'c2', name: 'B-Court 2', sportId: 'badminton' },
+  { id: 't1', name: 'Clay Court', sportId: 'tennis' },
+  { id: 'tt1', name: 'Table 1', sportId: 'tt' },
+  { id: 'bk1', name: 'Main Court', sportId: 'basketball' },
+  { id: 'ch1', name: 'Board 1', sportId: 'chess' },
+];
+
+const INITIAL_MATCHES: Match[] = [
+  // Badminton
+  { id: 'm1', sportId: 'badminton', round: 1, matchNumber: 1, playerA: { id: 'p1', name: 'Viktor Axelsen', club: 'Odense BK', seed: 1 }, playerB: { id: 'p2', name: 'Kento Momota', club: 'NTT East' }, status: 'COMPLETED', winnerId: 'p1', score: '21-19, 21-15', startTime: '2023-10-10T09:00:00', endTime: '2023-10-10T09:45:00', courtId: 'c1', nextMatchId: 'm5' },
+  { id: 'm2', sportId: 'badminton', round: 1, matchNumber: 2, playerA: { id: 'p3', name: 'Lee Zii Jia', club: 'Independent', seed: 4 }, playerB: { id: 'p4', name: 'Loh Kean Yew', club: 'Singapore BA' }, status: 'COMPLETED', winnerId: 'p4', score: '18-21, 12-21', startTime: '2023-10-10T09:00:00', endTime: '2023-10-10T09:40:00', courtId: 'c2', nextMatchId: 'm5' },
+  { id: 'm3', sportId: 'badminton', round: 1, matchNumber: 3, playerA: { id: 'p5', name: 'Anthony Ginting', club: 'SGS PLN', seed: 3 }, playerB: { id: 'p6', name: 'Jonatan Christie', club: 'Tangkas' }, status: 'SCHEDULED', startTime: '2023-10-10T10:00:00', endTime: '2023-10-10T10:50:00', courtId: 'c1', nextMatchId: 'm6' },
+  { id: 'm4', sportId: 'badminton', round: 1, matchNumber: 4, playerA: { id: 'p7', name: 'Lakshya Sen', club: 'Prakash Academy', seed: 2 }, playerB: { id: 'p8', name: 'Prannoy H.S.', club: 'Gopichand Academy' }, status: 'ONGOING', startTime: '2023-10-10T10:00:00', endTime: '2023-10-10T10:55:00', courtId: 'c2', nextMatchId: 'm6' },
+  { id: 'm5', sportId: 'badminton', round: 2, matchNumber: 1, playerA: { id: 'p1', name: 'Viktor Axelsen', club: 'Odense BK', seed: 1 }, playerB: { id: 'p4', name: 'Loh Kean Yew', club: 'Singapore BA' }, status: 'PENDING', nextMatchId: 'm7' },
+  { id: 'm6', sportId: 'badminton', round: 2, matchNumber: 2, playerA: { id: 'TBD', name: 'Winner M3', club: '-', seed: 0 }, playerB: { id: 'TBD', name: 'Winner M4', club: '-', seed: 0 }, status: 'PENDING', nextMatchId: 'm7' },
+  
+  // Tennis
+  { id: 'tm1', sportId: 'tennis', round: 1, matchNumber: 1, playerA: { id: 'tp1', name: 'Novak D.', club: 'SRB', seed: 1 }, playerB: { id: 'tp2', name: 'Carlos A.', club: 'ESP', seed: 2 }, status: 'SCHEDULED', startTime: '2023-10-10T10:00:00', courtId: 't1' },
+  
+  // Chess
+  { id: 'cm1', sportId: 'chess', round: 1, matchNumber: 1, playerA: { id: 'cp1', name: 'Magnus Carlsen', club: 'NOR', seed: 1 }, playerB: { id: 'cp2', name: 'Hikaru Nakamura', club: 'USA', seed: 2 }, status: 'ONGOING', startTime: '2023-10-10T14:00:00', courtId: 'ch1' },
+];
+
+// --- Mock Leaderboard Data ---
+const LEADERBOARD_DATA: LeaderboardEntry[] = [
+  { rank: 1, playerId: 'p1', name: 'Viktor Axelsen', club: 'Odense BK', sportId: 'badminton', matchesPlayed: 45, wins: 42, losses: 3, points: 12600, trend: 'up' },
+  { rank: 2, playerId: 'p2', name: 'Kento Momota', club: 'NTT East', sportId: 'badminton', matchesPlayed: 42, wins: 38, losses: 4, points: 11400, trend: 'down' },
+  { rank: 3, playerId: 'p3', name: 'Lee Zii Jia', club: 'Independent', sportId: 'badminton', matchesPlayed: 40, wins: 35, losses: 5, points: 10500, trend: 'neutral' },
+  { rank: 4, playerId: 'p4', name: 'Loh Kean Yew', club: 'Singapore BA', sportId: 'badminton', matchesPlayed: 38, wins: 30, losses: 8, points: 9200, trend: 'up' },
+  { rank: 5, playerId: 'p7', name: 'Lakshya Sen', club: 'Prakash Academy', sportId: 'badminton', matchesPlayed: 36, wins: 28, losses: 8, points: 8800, trend: 'down' },
+  { rank: 1, playerId: 'tp1', name: 'Novak Djokovic', club: 'SRB', sportId: 'tennis', matchesPlayed: 50, wins: 48, losses: 2, points: 15000, trend: 'neutral' },
+  { rank: 2, playerId: 'tp2', name: 'Carlos Alcaraz', club: 'ESP', sportId: 'tennis', matchesPlayed: 48, wins: 45, losses: 3, points: 14200, trend: 'up' },
+  { rank: 1, playerId: 'cp1', name: 'Magnus Carlsen', club: 'NOR', sportId: 'chess', matchesPlayed: 100, wins: 80, losses: 5, points: 2880, trend: 'neutral' },
+];
+
+// --- Gemini API (Unchanged) ---
+const generateGeminiContent = async (prompt: string): Promise<string> => {
+  const apiKey = ""; 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!response.ok) throw new Error(`Gemini API Error`);
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "AI unavailable.";
+  } catch (error) {
+    return "Connecting to AI...";
+  }
+};
+
+// --- Main App ---
+export default function App() {
+  const [currentView, setCurrentView] = useState<View>('LEADERBOARD'); // Updated default view for demo
+  const [selectedSportId, setSelectedSportId] = useState<string>('badminton');
+  const [userRole, setUserRole] = useState<UserRole>('GUEST');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [matches, setMatches] = useState<Match[]>(INITIAL_MATCHES);
+  const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([]);
+  const [notification, setNotification] = useState<string | null>(null);
+  const [systemLogs, setSystemLogs] = useState<LogEntry[]>([]);
+
+  const activeSport = SPORTS_DATA.find(s => s.id === selectedSportId) || SPORTS_DATA[0];
+
+  const addLog = (action: string, details: string, type: LogEntry['type'] = 'INFO') => {
+    const newLog: LogEntry = {
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date(),
+      action,
+      details,
+      type
+    };
+    setSystemLogs(prev => [newLog, ...prev]);
+  };
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const navigate = (view: View) => {
+    window.scrollTo(0, 0);
+    setCurrentView(view);
+  };
+
+  // Mock live updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMatches(prev => prev.map(m => {
+        if (m.status === 'ONGOING' && Math.random() > 0.98) {
+          const winnerId = Math.random() > 0.5 ? m.playerA.id : m.playerB.id;
+          const score = '21-19, 21-18'; 
+          addLog('MATCH_COMPLETE', `Match ${m.id} completed. Winner: ${winnerId === m.playerA.id ? m.playerA.name : m.playerB.name}`, 'SUCCESS');
+          return { ...m, status: 'COMPLETED', winnerId, score, endTime: new Date().toISOString() };
+        }
+        return m;
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRegister = (player: Partial<Player>, sportId: string) => {
+    const uniqueId = `XTH-${sportId.substring(0,2).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newPlayer = { ...player, id: uniqueId, sportId, club: player.club || 'Independent' } as Player;
+    setRegisteredPlayers([...registeredPlayers, newPlayer]);
+    showNotification(`Registered! ID: ${uniqueId}`);
+    addLog('PLAYER_REGISTER', `New player ${newPlayer.name} registered for ${sportId}`, 'INFO');
+    return uniqueId;
+  };
+
+  const login = (role: UserRole, playerId?: string) => {
+    setUserRole(role);
+    if (role === 'PLAYER' && playerId) {
+      setCurrentUserId(playerId);
+      showNotification(`Welcome back!`);
+      addLog('LOGIN', `Player ${playerId} logged in`, 'INFO');
+      navigate('PLAYER_DASHBOARD');
+    } else {
+      setCurrentUserId(null);
+      showNotification(`Logged in as ${role}`);
+      addLog('LOGIN', `User logged in as ${role}`, 'INFO');
+      navigate(role === 'ADMIN' ? 'ADMIN' : role === 'UMPIRE' ? 'UMPIRE' : 'LANDING');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans text-slate-900 selection:bg-emerald-100/50">
+      {notification && (
+        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-right-10 fade-in duration-300">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl shadow-emerald-900/10 px-6 py-4 rounded-2xl flex items-center gap-4">
+            <div className="bg-emerald-500/10 p-2 rounded-full">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800">Notification</p>
+              <p className="text-xs text-slate-500 font-medium">{notification}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Navbar currentView={currentView} navigate={navigate} userRole={userRole} onLogout={() => { setUserRole('GUEST'); setCurrentUserId(null); navigate('LANDING'); }} />
+
+      <main className="pt-24 pb-12 px-4 md:px-8 min-h-screen flex flex-col max-w-[1600px] mx-auto w-full">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {currentView === 'LANDING' && <LandingPage navigate={navigate} />}
+          {currentView === 'SPORTS_DIRECTORY' && <SportsDirectory navigate={navigate} onSelectSport={(id) => { setSelectedSportId(id); navigate('SPORT_DETAIL'); }} />}
+          {currentView === 'SPORT_DETAIL' && <SportDetailPage sport={activeSport} onRegister={handleRegister} navigate={navigate} />}
+          {currentView === 'FIXTURES' && <FixturesView matches={matches.filter(m => m.sportId === selectedSportId)} activeSport={activeSport} sports={SPORTS_DATA} onSportChange={setSelectedSportId} currentUserId={currentUserId} />}
+          {currentView === 'SCHEDULE' && <ScheduleView matches={matches.filter(m => m.sportId === selectedSportId)} courts={MOCK_COURTS.filter(c => c.sportId === selectedSportId)} currentUserId={currentUserId} activeSport={activeSport} sports={SPORTS_DATA} onSportChange={setSelectedSportId} />}
+          {currentView === 'LEADERBOARD' && <LeaderboardView activeSport={activeSport} sports={SPORTS_DATA} onSportChange={setSelectedSportId} />}
+          {currentView === 'PLAYER_DASHBOARD' && <PlayerDashboard matches={matches} currentUserId={currentUserId} navigate={navigate} activeSport={activeSport} />}
+          {currentView === 'ADMIN' && <AdminDashboard matches={matches} setMatches={setMatches} activeSport={activeSport} sports={SPORTS_DATA} onSportChange={setSelectedSportId} registeredPlayers={registeredPlayers} showNotification={showNotification} systemLogs={systemLogs} />}
+          {currentView === 'LOGIN' && <LoginPage onLogin={login} />}
+          {currentView === 'UMPIRE' && <UmpireConsole matches={matches} setMatches={setMatches} showNotification={showNotification} addLog={addLog} />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// --- NAVBAR ---
+function Navbar({ currentView, navigate, userRole, onLogout }: any) {
+  return (
+    <nav className="fixed top-4 left-4 right-4 h-16 bg-white/70 backdrop-blur-xl border border-white/40 rounded-2xl shadow-sm z-50 px-6 flex items-center justify-between transition-all duration-300">
+      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('LANDING')}>
+        <div className="w-9 h-9 bg-gradient-to-tr from-emerald-500 to-emerald-400 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+          X
+        </div>
+        <span className="text-xl font-extrabold text-slate-800 tracking-tight group-hover:text-emerald-600 transition-colors">
+          Xthlete
+        </span>
+      </div>
+
+      <div className="hidden md:flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-white/50">
+        {['LANDING', 'FIXTURES', 'SCHEDULE', 'LEADERBOARD'].map((view) => (
+          <button 
+            key={view}
+            onClick={() => navigate(view)}
+            className={`px-5 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
+              currentView === view 
+                ? 'bg-white text-slate-800 shadow-sm scale-100' 
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            {view === 'LANDING' ? 'Home' : view.charAt(0) + view.slice(1).toLowerCase()}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-4">
+        {userRole === 'GUEST' ? (
+          <button 
+            onClick={() => navigate('LOGIN')}
+            className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-slate-900/20 hover:-translate-y-0.5"
+          >
+            Sign In
+          </button>
+        ) : (
+          <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+             <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-slate-800">{userRole}</p>
+                <p className="text-[10px] font-medium text-emerald-600">Online</p>
+             </div>
+             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-white flex items-center justify-center font-bold text-sm shadow-md ring-2 ring-white">
+                {userRole[0]}
+             </div>
+             <button onClick={onLogout} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
+                <LogOut className="w-4 h-4" />
+             </button>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+// --- NEW LEADERBOARD COMPONENT ---
+function LeaderboardView({ activeSport, sports, onSportChange }: { activeSport: Sport, sports: Sport[], onSportChange: (id: string) => void }) {
+  const data = LEADERBOARD_DATA.filter(p => p.sportId === activeSport.id).sort((a, b) => a.rank - b.rank);
+
+  return (
+    <div className="w-full max-w-5xl mx-auto">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">Global Leaderboard</h1>
+          <div className="flex items-center gap-2 text-slate-500 font-medium">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span>Top performers in {activeSport.name}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <select 
+            value={activeSport.id} 
+            onChange={(e) => onSportChange(e.target.value)} 
+            className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            {sports.map((s: Sport) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Top 3 Podium Display */}
+        {data.slice(0, 3).map((player, idx) => {
+          const isFirst = idx === 0;
+          const bgColor = isFirst ? 'bg-gradient-to-b from-amber-100 to-white' : idx === 1 ? 'bg-gradient-to-b from-slate-100 to-white' : 'bg-gradient-to-b from-orange-50 to-white';
+          const borderColor = isFirst ? 'border-amber-200' : idx === 1 ? 'border-slate-200' : 'border-orange-200';
+          const medalColor = isFirst ? 'text-amber-500' : idx === 1 ? 'text-slate-400' : 'text-orange-400';
+          
+          return (
+            <div key={player.playerId} className={`${bgColor} border ${borderColor} rounded-3xl p-6 shadow-xl shadow-slate-200/50 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
+              <div className={`absolute top-4 right-4 ${medalColor}`}>
+                <Medal className="w-8 h-8" />
+              </div>
+              <div className="flex flex-col items-center text-center pt-4">
+                <div className="w-20 h-20 rounded-full bg-white border-4 border-white shadow-lg mb-4 flex items-center justify-center text-2xl font-bold text-slate-300 relative">
+                  {player.name[0]}
+                  <div className={`absolute -bottom-2 bg-slate-900 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border-2 border-white`}>
+                    #{player.rank}
+                  </div>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 leading-tight mb-1">{player.name}</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">{player.club}</p>
+                
+                <div className="w-full bg-white/60 rounded-xl p-3 flex justify-between items-center border border-white/60">
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Points</p>
+                    <p className="text-lg font-black text-slate-800">{player.points.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Win Rate</p>
+                    <p className="text-lg font-black text-emerald-600">{Math.round((player.wins / player.matchesPlayed) * 100)}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Rest of the List */}
+      <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-400 text-xs font-bold uppercase tracking-wider">
+              <th className="p-6 w-24">Rank</th>
+              <th className="p-6">Player</th>
+              <th className="p-6 text-center hidden md:table-cell">Matches</th>
+              <th className="p-6 text-center hidden md:table-cell">W / L</th>
+              <th className="p-6 text-right">Points</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50 text-sm text-slate-600 font-medium">
+            {data.slice(3).map((player) => (
+              <tr key={player.playerId} className="hover:bg-white/80 transition-colors group">
+                <td className="p-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-slate-400 group-hover:text-slate-800">#{player.rank}</span>
+                    {player.trend === 'up' ? <ArrowUp className="w-3 h-3 text-emerald-500" /> : player.trend === 'down' ? <ArrowDown className="w-3 h-3 text-red-500" /> : <Minus className="w-3 h-3 text-slate-300" />}
+                  </div>
+                </td>
+                <td className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">{player.name[0]}</div>
+                    <div>
+                      <div className="font-bold text-slate-800">{player.name}</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">{player.club}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="p-6 text-center hidden md:table-cell font-mono text-slate-500">{player.matchesPlayed}</td>
+                <td className="p-6 text-center hidden md:table-cell">
+                  <span className="text-emerald-600 font-bold">{player.wins}</span> / <span className="text-red-400">{player.losses}</span>
+                </td>
+                <td className="p-6 text-right font-bold text-slate-800 font-mono">{player.points.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// --- FIXTURES VIEW (Unchanged) ---
+function FixturesView({ matches, activeSport, sports, onSportChange, currentUserId }: any) {
+  const [activeFormat, setActiveFormat] = useState<Format>('knockout');
+
+  const KnockoutBracket = () => {
+    const rounds = useMemo(() => {
+      const r: Record<number, Match[]> = {};
+      matches.forEach((m: Match) => {
+        if (!r[m.round]) r[m.round] = [];
+        r[m.round].push(m);
+      });
+      Object.keys(r).forEach(k => r[parseInt(k)].sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0)));
+      return r;
+    }, [matches]);
+
+    return (
+      <div className="overflow-x-auto pb-12 pt-4 relative min-h-[600px]">
+        {/* Connector Lines (Styled) */}
+        <svg className="absolute inset-0 pointer-events-none w-full h-full z-0 text-slate-300/60" style={{ minWidth: '900px' }}>
+          <path d="M 340 130 H 360 V 220 H 380" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 340 310 H 360 V 220 H 380" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 340 490 H 360 V 580 H 380" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 340 670 H 360 V 580 H 380" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 680 220 H 700 V 400 H 720" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 680 580 H 700 V 400 H 720" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+
+        <div className="flex gap-32 min-w-max px-8 relative z-10">
+          {Object.keys(rounds).map((roundNum) => {
+            const rNum = parseInt(roundNum);
+            const spacingClass = rNum === 1 ? 'gap-8' : rNum === 2 ? 'gap-[240px] pt-[90px]' : 'pt-[270px]';
+            
+            return (
+              <div key={roundNum} className={`flex flex-col ${spacingClass} min-w-[340px]`}>
+                <div className="text-center">
+                  <span className="bg-white/50 backdrop-blur px-4 py-1 rounded-full text-xs font-extrabold text-slate-400 uppercase tracking-widest border border-white/50 shadow-sm">
+                    Round {roundNum}
+                  </span>
+                </div>
+                {rounds[rNum].map((match: Match) => <MatchCard key={match.id} match={match} currentUserId={currentUserId} sportName={activeSport.name} />)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-10 gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">Tournament Bracket</h1>
+          <div className="flex items-center gap-3">
+            <div className="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide">
+              {activeSport.name}
+            </div>
+            <span className="text-slate-400 text-sm font-medium">Men's Singles Championship</span>
+          </div>
+        </div>
+        
+        <div className="bg-white/60 backdrop-blur-md p-1.5 rounded-xl border border-white/60 shadow-sm flex gap-1">
+          {['knockout', 'roundrobin', 'swiss'].map((fmt) => (
+             <button
+               key={fmt}
+               onClick={() => setActiveFormat(fmt as Format)}
+               className={`px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                 activeFormat === fmt 
+                   ? 'bg-white text-slate-800 shadow-md scale-100 ring-1 ring-black/5' 
+                   : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+               }`}
+             >
+               {fmt === 'roundrobin' ? 'Round Robin' : fmt.charAt(0).toUpperCase() + fmt.slice(1)}
+             </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white/40 backdrop-blur-sm border border-white/50 rounded-3xl p-8 shadow-xl shadow-slate-200/50 min-h-[600px]">
+        {activeFormat === 'knockout' ? <KnockoutBracket /> : (
+          <div className="h-full flex flex-col items-center justify-center text-center p-20">
+            <Grid className="w-12 h-12 text-slate-300 mb-4" />
+            <p className="text-slate-500 font-medium">Format view available for Knockout only in this demo.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MatchCard({ match, currentUserId, sportName }: { match: Match, currentUserId: string | null, sportName: string }) {
+  const isUserMatch = currentUserId && (match.playerA.id === currentUserId || match.playerB.id === currentUserId);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+
+  const handleAnalyze = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (analysis) { setShowAnalysis(true); return; }
+    setLoading(true); setShowAnalysis(true);
+    const prompt = `Act as an excited sports commentator. Write a short, 2-sentence hype prediction for ${match.playerA.name} vs ${match.playerB.name}.`;
+    const result = await generateGeminiContent(prompt);
+    setAnalysis(result);
+    setLoading(false);
+  };
+  
+  return (
+    <div className={`relative group w-full transition-transform duration-300 hover:-translate-y-1 ${isUserMatch ? 'ring-2 ring-emerald-400 rounded-2xl shadow-emerald-100' : ''}`}>
+      <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-0 shadow-sm hover:shadow-xl hover:shadow-slate-200/60 transition-all relative overflow-hidden">
+        
+        <button onClick={handleAnalyze} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 shadow-sm">
+          <Sparkles className="w-4 h-4" />
+        </button>
+
+        {/* Player A */}
+        <div className={`px-6 py-4 flex justify-between items-center border-b border-slate-50 ${match.winnerId === match.playerA.id ? 'bg-gradient-to-r from-emerald-50/50 to-transparent' : ''}`}>
+          <div>
+            <div className={`font-bold text-lg leading-tight ${match.winnerId === match.playerA.id ? 'text-slate-900' : 'text-slate-600'}`}>
+              {match.playerA.name}
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">{match.playerA.club}</div>
+          </div>
+          {match.status === 'COMPLETED' && match.winnerId === match.playerA.id && (
+            <div className="bg-emerald-500 text-white p-1 rounded-full shadow-sm shadow-emerald-200"><Check className="w-3 h-3" /></div>
+          )}
+        </div>
+
+        {/* Player B */}
+        <div className={`px-6 py-4 flex justify-between items-center ${match.winnerId === match.playerB.id ? 'bg-gradient-to-r from-emerald-50/50 to-transparent' : ''}`}>
+          <div>
+            <div className={`font-bold text-lg leading-tight ${match.winnerId === match.playerB.id ? 'text-slate-900' : 'text-slate-600'}`}>
+              {match.playerB.name}
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">{match.playerB.club}</div>
+          </div>
+          {match.status === 'COMPLETED' && match.winnerId === match.playerB.id && (
+            <div className="bg-emerald-500 text-white p-1 rounded-full shadow-sm shadow-emerald-200"><Check className="w-3 h-3" /></div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 bg-slate-50/80 border-t border-slate-100 flex justify-between items-center">
+          <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+            match.status === 'COMPLETED' ? 'bg-slate-800 text-white' : 
+            match.status === 'ONGOING' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 
+            'bg-slate-200 text-slate-500'
+          }`}>
+            {match.status}
+          </span>
+          
+          {match.score ? (
+            <span className="font-mono font-bold text-slate-700 text-sm">{match.score}</span>
+          ) : (
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> {match.startTime ? new Date(match.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'TBA'}
+            </span>
+          )}
+        </div>
+
+        {/* AI Overlay */}
+        {showAnalysis && (
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-md z-30 p-6 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-3">
+              <Sparkles className="w-4 h-4" /> Gemini Insight
+            </div>
+            {loading ? (
+              <Loader2 className="w-8 h-8 text-slate-300 animate-spin" />
+            ) : (
+              <p className="text-sm font-medium text-slate-600 leading-relaxed italic max-w-[240px]">"{analysis}"</p>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); setShowAnalysis(false); }} className="mt-6 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">DISMISS</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- LANDING PAGE (Enhanced) ---
+function LandingPage({ navigate }: { navigate: (v: View) => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[80vh] relative">
+      {/* Background Blobs */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+        <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-md border border-white/50 rounded-full px-5 py-1.5 text-emerald-700 text-sm font-bold mb-8 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" /> 
+          Live: Winter Championship 2025
+        </div>
+        
+        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tight mb-8 leading-[0.9]">
+          Compete. <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-600">Conquer.</span>
+        </h1>
+        
+        <p className="text-xl text-slate-500 mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
+          The next-generation tournament platform. Automatic fixtures, real-time scheduling, and AI-powered insights for the modern athlete.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-5 justify-center">
+          <button onClick={() => navigate('SPORTS_DIRECTORY')} className="bg-slate-900 hover:bg-slate-800 text-white text-lg font-bold py-4 px-10 rounded-2xl transition-all shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2">
+            Explore Sports <ArrowRight className="w-5 h-5" />
+          </button>
+          <button onClick={() => navigate('LOGIN')} className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-lg font-bold py-4 px-10 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+            Organizer Console
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- SCHEDULE (Enhanced) ---
+function ScheduleView({ matches, courts, currentUserId }: any) {
+  const hours = Array.from({ length: 12 }, (_, i) => 9 + i);
+  return (
+    <div className="w-full max-w-[1600px] mx-auto">
+      <div className="mb-8">
+        <h2 className="text-3xl font-black text-slate-800">Court Schedule</h2>
+        <p className="text-slate-500 font-medium">Real-time court allocation and match timings.</p>
+      </div>
+      
+      <div className="bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden p-8">
+        <div className="overflow-x-auto pb-4">
+          <div className="min-w-[1000px]">
+            <div className="flex border-b border-slate-200/60 pb-4 mb-4">
+              <div className="w-40 font-bold text-slate-400 text-xs uppercase tracking-wider">Court</div>
+              <div className="flex-1 relative h-6">
+                {hours.map((h, i) => (
+                  <div key={h} className="absolute top-0 text-xs font-bold text-slate-400" style={{ left: `${(i / 12) * 100}%` }}>
+                    {h}:00
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {courts.map((court: Court) => (
+              <div key={court.id} className="flex group py-6 border-b border-slate-100 last:border-0 hover:bg-white/40 transition-colors rounded-xl px-2">
+                <div className="w-40 font-bold text-slate-700 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                  {court.name}
+                </div>
+                <div className="flex-1 relative h-12 bg-slate-100/50 rounded-lg border border-slate-200/50 overflow-hidden">
+                  {/* Grid Lines */}
+                  {hours.map((h, i) => (
+                    <div key={h} className="absolute top-0 bottom-0 border-l border-slate-200/30 border-dashed" style={{ left: `${(i / 12) * 100}%` }} />
+                  ))}
+                  
+                  {matches.filter((m: Match) => m.courtId === court.id && m.startTime).map((m: Match) => {
+                     const start = new Date(m.startTime!);
+                     const end = new Date(m.endTime!);
+                     const left = ((start.getHours() + start.getMinutes()/60 - 9) / 12) * 100;
+                     const width = ((end.getTime() - start.getTime()) / 3600000 / 12) * 100;
+                     
+                     return (
+                        <div key={m.id} className="absolute top-1 bottom-1 bg-white border border-emerald-100 rounded-md shadow-sm p-2 flex flex-col justify-center hover:z-10 hover:shadow-md transition-all cursor-pointer group/match" style={{left: `${left}%`, width: `${width}%`}}>
+                          <div className="bg-emerald-50 absolute left-0 top-0 bottom-0 w-1"></div>
+                          <div className="text-[10px] font-bold text-slate-800 truncate pl-2">{m.playerA.name}</div>
+                          <div className="text-[9px] font-medium text-slate-500 truncate pl-2">vs {m.playerB.name}</div>
+                        </div>
+                     )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Other Components ---
+
+function SportsDirectory({ navigate, onSelectSport }: { navigate: (v: View) => void, onSelectSport: (id: string) => void }) {
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="text-center mb-16">
+        <h2 className="text-4xl font-black text-slate-900 mb-4">Choose Your Arena</h2>
+        <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto">Join thousands of players competing in the most advanced tournaments worldwide.</p>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {SPORTS_DATA.map(sport => (
+          <div key={sport.id} className="group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-emerald-900/5 hover:-translate-y-2 transition-all duration-300 cursor-pointer" onClick={() => onSelectSport(sport.id)}>
+            <div className="h-40 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center text-7xl group-hover:scale-110 transition-transform duration-500">{sport.icon}</div>
+            <div className="p-8">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors">{sport.name}</h3>
+              <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">{sport.description}</p>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{sport.registeredCount} Players</span>
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SportDetailPage({ sport, onRegister, navigate }: { sport: Sport, onRegister: any, navigate: any }) {
+  const [showRegForm, setShowRegForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', email: '', club: '' });
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onRegister(formData, sport.id); setShowRegForm(false); };
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <button onClick={() => navigate('SPORTS_DIRECTORY')} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-8 text-sm font-bold uppercase tracking-wide"><ChevronRight className="w-4 h-4 rotate-180" /> Back to Sports</button>
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 bg-white rounded-3xl p-10 border border-slate-100 shadow-xl shadow-slate-200/50">
+          <div className="flex items-center gap-4 mb-6">
+             <div className="text-6xl">{sport.icon}</div>
+             <div>
+               <h1 className="text-4xl font-black text-slate-900 mb-1">{sport.name} Cup</h1>
+               <div className="flex gap-2">
+                 <span className="px-3 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-bold uppercase">Pro Series</span>
+                 <span className="px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold uppercase">Live</span>
+               </div>
+             </div>
+          </div>
+          <p className="text-lg text-slate-600 leading-relaxed mb-8">{sport.description} - Experience professional grade officiating, real-time stats, and AI analysis.</p>
+          
+          <div className="grid grid-cols-2 gap-6">
+             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="text-slate-400 text-xs font-bold uppercase mb-1">Location</div>
+                <div className="font-bold text-slate-800 flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-500"/> Central Arena</div>
+             </div>
+             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="text-slate-400 text-xs font-bold uppercase mb-1">Dates</div>
+                <div className="font-bold text-slate-800 flex items-center gap-2"><Calendar className="w-4 h-4 text-emerald-500"/> Oct 12 - 15</div>
+             </div>
+          </div>
+        </div>
+        
+        <div className="bg-slate-900 rounded-3xl p-8 shadow-2xl shadow-slate-900/20 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 blur-3xl rounded-full"></div>
+          <h3 className="text-2xl font-bold mb-2">Join the Action</h3>
+          <p className="text-slate-400 text-sm mb-8">Limited slots available for this season.</p>
+          <button onClick={() => setShowRegForm(true)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]">Register Now</button>
+          <p className="text-center text-slate-500 text-xs mt-4">Registration closes in 2 days</p>
+        </div>
+      </div>
+      
+      {showRegForm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">Player Registration</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="Club / Organization" value={formData.club} onChange={e => setFormData({...formData, club: e.target.value})} />
+              <div className="flex gap-3 mt-6">
+                <button type="button" onClick={() => setShowRegForm(false)} className="flex-1 text-slate-500 font-bold hover:bg-slate-50 py-3 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors">Confirm</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminDashboard({ matches, setMatches, activeSport, sports, onSportChange, registeredPlayers, showNotification, systemLogs }: any) {
+  const [aiPrompt, setAiPrompt] = useState(''); 
+  const [aiResponse, setAiResponse] = useState(''); 
+  const [aiLoading, setAiLoading] = useState(false);
+  
+  const handleAiAsk = async () => { 
+    if (!aiPrompt) return; 
+    setAiLoading(true); 
+    setAiResponse(''); 
+    const context = `
+      You are the Organizer Copilot for the ${activeSport.name} tournament.
+      Current Stats:
+      - Matches: ${matches.filter((m: Match) => m.sportId === activeSport.id).length} total.
+      - Registered Players: ${registeredPlayers.length} new, plus existing seeds.
+      - Status: The tournament is live.
+      
+      Task: Answer the user's request concisely and professionally.
+    `;
+    const res = await generateGeminiContent(`${context} User Request: ${aiPrompt}`); 
+    setAiResponse(res); 
+    setAiLoading(false); 
+  };
+  
+  const sportRegistrations = registeredPlayers.filter((p: Player) => p.sportId === activeSport.id);
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900">Admin Console</h2>
+          <p className="text-slate-500 font-medium">Manage tournaments and schedules</p>
+        </div>
+        <select value={activeSport.id} onChange={(e) => onSportChange(e.target.value)} className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500">
+          {sports.map((s: Sport) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl shadow-lg shadow-slate-200/50 border border-white/50"><div className="text-sm font-bold text-slate-400 uppercase mb-2">Total Matches</div><div className="text-4xl font-black text-slate-900">{matches.filter((m: Match) => m.sportId === activeSport.id).length}</div></div>
+        <div className="bg-white p-6 rounded-2xl shadow-lg shadow-slate-200/50 border border-white/50"><div className="text-sm font-bold text-slate-400 uppercase mb-2">Players</div><div className="text-4xl font-black text-emerald-600">{sportRegistrations.length + 8}</div></div>
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+          <div className="relative z-10">
+             <div className="text-sm font-bold text-indigo-200 uppercase mb-2">AI Assistant</div>
+             <div className="text-2xl font-bold">Organizer Copilot</div>
+             <button onClick={() => setAiPrompt("Draft schedule")} className="mt-4 bg-white/20 backdrop-blur px-4 py-2 rounded-lg text-sm font-bold hover:bg-white/30 transition-all">Open Chat</button>
+          </div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden h-fit">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <h3 className="font-bold text-slate-800 text-lg">System Logs</h3>
+            <span className="text-xs font-medium text-slate-400">Real-time updates</span>
+          </div>
+          <div className="max-h-[400px] overflow-y-auto p-0">
+            {systemLogs.length > 0 ? (
+              <div className="divide-y divide-slate-50">
+                {systemLogs.map((log: LogEntry) => (
+                  <div key={log.id} className="p-4 hover:bg-slate-50 transition-colors flex gap-3 items-start">
+                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${log.type === 'SUCCESS' ? 'bg-emerald-500' : log.type === 'WARNING' ? 'bg-amber-500' : 'bg-blue-500'}`} />
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">{log.action}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{log.details}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-mono">{log.timestamp.toLocaleTimeString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 text-sm">No logs generated yet. Perform actions to see logs here.</div>
+            )}
+          </div>
+        </div>
+
+        {/* ✨ Organizer Copilot Chat */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden h-fit flex flex-col">
+          <div className="p-6 border-b border-slate-100 bg-indigo-50/50">
+            <h3 className="font-bold text-indigo-900 flex gap-2 items-center"><Bot className="w-5 h-5"/> AI Chat</h3>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="relative">
+              <input type="text" className="w-full pl-4 pr-10 py-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" placeholder="Ask me anything..." value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleAiAsk()}/>
+              <button onClick={handleAiAsk} className="absolute right-2 top-2 p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">{aiLoading?<Loader2 className="w-4 h-4 animate-spin"/>:<MessageSquare className="w-4 h-4"/>}</button>
+            </div>
+            {aiResponse && <div className="mt-2 p-4 bg-indigo-50 rounded-xl text-sm text-indigo-900 border border-indigo-100 leading-relaxed shadow-sm animate-in fade-in slide-in-from-bottom-2"><span className="font-bold block mb-1 text-indigo-700">AI Response:</span>{aiResponse}</div>}
+            
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button onClick={() => {setAiPrompt("Draft a delay announcement due to rain"); handleAiAsk();}} className="text-xs bg-slate-50 border border-slate-200 py-2.5 rounded-lg hover:bg-white hover:shadow-sm transition-all text-slate-600 font-medium">📢 Announcement</button>
+              <button onClick={() => {setAiPrompt("Suggest optimal rest time for finals"); handleAiAsk();}} className="text-xs bg-slate-50 border border-slate-200 py-2.5 rounded-lg hover:bg-white hover:shadow-sm transition-all text-slate-600 font-medium">⏱️ Rest Time</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoginPage({ onLogin }: any) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-4">
+      <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4 shadow-lg shadow-emerald-200">X</div>
+          <h2 className="text-3xl font-black text-slate-900">Welcome Back</h2>
+          <p className="text-slate-500 font-medium mt-2">Sign in to access your dashboard</p>
+        </div>
+        <div className="space-y-4">
+          <button onClick={() => onLogin('ADMIN')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:-translate-y-1">Organizer Login</button>
+          <button onClick={() => onLogin('PLAYER', 'p1')} className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-xl font-bold hover:border-emerald-500 hover:text-emerald-600 transition-all">Player Login</button>
+          <button onClick={() => onLogin('GUEST')} className="w-full text-slate-400 font-bold text-sm hover:text-slate-600">Continue as Guest</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UmpireConsole({ matches, setMatches, showNotification, addLog }: any) {
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const activeMatches = matches.filter((m: Match) => m.status === 'SCHEDULED' || m.status === 'ONGOING');
+
+  const startMatch = (id: string) => {
+    setMatches((prev: any[]) => prev.map(m => m.id === id ? { ...m, status: 'ONGOING' } : m));
+    showNotification("Match Started");
+    addLog('MATCH_START', `Match ${id} started by umpire`, 'INFO');
+    setSelectedMatch(null);
+  };
+
+  const endMatch = (id: string, winnerId: string) => {
+    setMatches((prev: any[]) => prev.map(m => m.id === id ? { ...m, status: 'COMPLETED', winnerId, score: '21-15, 21-18' } : m));
+    showNotification("Score Submitted successfully");
+    addLog('MATCH_END', `Match ${id} ended manually. Winner: ${winnerId}`, 'SUCCESS');
+    setSelectedMatch(null);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <h2 className="text-4xl font-black text-slate-900 mb-8">Umpire Console</h2>
+      
+      {!selectedMatch ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {activeMatches.map((match: Match) => (
+            <div key={match.id} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group" onClick={() => setSelectedMatch(match)}>
+              <div className="flex justify-between items-center mb-6">
+                <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${match.status === 'ONGOING' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 'bg-slate-100 text-slate-600'}`}>
+                  {match.status}
+                </span>
+                <span className="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-1 rounded">#{match.id.toUpperCase()}</span>
+              </div>
+              
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg text-slate-800">{match.playerA.name}</span>
+                </div>
+                <div className="text-center text-xs font-bold text-slate-300 uppercase tracking-[0.2em]">VS</div>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg text-slate-800">{match.playerB.name}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-50 p-3 rounded-xl">
+                 <MapPin className="w-4 h-4 text-emerald-500" /> 
+                 {MOCK_COURTS.find(c => c.id === match.courtId)?.name || 'Unassigned'}
+              </div>
+            </div>
+          ))}
+          {activeMatches.length === 0 && (
+            <div className="col-span-full bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300">
+              <p className="text-slate-500 font-medium text-lg">No active matches assigned to you.</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+          <div className="bg-slate-900 text-white p-8 flex justify-between items-center">
+            <h3 className="font-bold text-2xl">Match Control</h3>
+            <button onClick={() => setSelectedMatch(null)} className="text-slate-400 hover:text-white font-bold text-sm bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-colors">Close</button>
+          </div>
+          <div className="p-10">
+            <div className="flex justify-between items-center mb-10">
+               <div className="text-center w-1/3">
+                 <div className="text-2xl font-black text-slate-900 leading-tight">{selectedMatch.playerA.name}</div>
+                 <div className="text-sm font-bold text-slate-400 mt-2 uppercase">{selectedMatch.playerA.club}</div>
+               </div>
+               <div className="text-4xl font-black text-slate-200">VS</div>
+               <div className="text-center w-1/3">
+                 <div className="text-2xl font-black text-slate-900 leading-tight">{selectedMatch.playerB.name}</div>
+                 <div className="text-sm font-bold text-slate-400 mt-2 uppercase">{selectedMatch.playerB.club}</div>
+               </div>
+            </div>
+
+            {selectedMatch.status === 'SCHEDULED' && (
+              <button 
+                onClick={() => startMatch(selectedMatch.id)}
+                className="w-full py-5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/30 transition-transform active:scale-[0.98]"
+              >
+                <Play className="w-6 h-6 fill-current" /> Start Match
+              </button>
+            )}
+
+            {selectedMatch.status === 'ONGOING' && (
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-6 rounded-2xl text-center border border-slate-100">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Live Score</div>
+                  <div className="text-5xl font-mono font-black text-slate-900 tracking-tight">18 - 18</div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => endMatch(selectedMatch.id, selectedMatch.playerA.id)}
+                    className="py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 shadow-lg hover:-translate-y-1 transition-all"
+                  >
+                    {selectedMatch.playerA.name} Wins
+                  </button>
+                  <button 
+                    onClick={() => endMatch(selectedMatch.id, selectedMatch.playerB.id)}
+                    className="py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 shadow-lg hover:-translate-y-1 transition-all"
+                  >
+                    {selectedMatch.playerB.name} Wins
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerDashboard({ currentUserId }: any) {
+  return <div className="container mx-auto px-4 py-12"><h2 className="text-4xl font-black text-slate-900 mb-2">Player Dashboard</h2><p className="text-xl text-slate-500 font-medium mb-8">Welcome back, {currentUserId}</p><div className="bg-white rounded-3xl p-12 shadow-xl border border-slate-100"><p className="text-slate-400">Your stats will appear here.</p></div></div>;
+}

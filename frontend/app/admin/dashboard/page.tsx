@@ -7,15 +7,7 @@ import { AuthNavBar } from '@/components/AuthNavBar';
 import { SecurityActivityPanel } from '@/components/SecurityActivityPanel';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
-import {
-    Trophy,
-    CheckCircle,
-    Clock,
-    Target,
-    Users,
-    Building2,
-    Calendar,
-} from 'lucide-react';
+import { OrganizerCopilot } from '@/components/OrganizerCopilot';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -142,30 +134,36 @@ export default function AdminDashboardPage() {
 
                     <RoleSwitcher />
 
-                    <div className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                            Quick Actions
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {quickActions.map((action) => {
-                                const Icon = action.icon;
-                                return (
-                                    <Link
-                                        key={action.href}
-                                        href={action.href}
-                                        className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
-                                    >
-                                        <Icon className={`${action.color} w-8 h-8 mb-3`} />
-                                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                                            {action.label}
-                                        </h3>
-                                    </Link>
-                                );
-                            })}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                        <div className="lg:col-span-2">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                                Quick Actions
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {quickActions.map((action) => {
+                                    const Icon = action.icon;
+                                    return (
+                                        <Link
+                                            key={action.href}
+                                            href={action.href}
+                                            className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                                        >
+                                            <Icon className={`${action.color} w-8 h-8 mb-3`} />
+                                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                                                {action.label}
+                                            </h3>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-8">
+                                <SecurityActivityPanel />
+                            </div>
+                        </div>
+                        <div className="lg:col-span-1 h-full">
+                             <OrganizerCopilot />
                         </div>
                     </div>
-
-                    <SecurityActivityPanel />
                 </div>
             </div>
         </>

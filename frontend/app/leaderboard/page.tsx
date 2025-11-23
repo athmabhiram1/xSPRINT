@@ -7,7 +7,7 @@ import { Footer } from '@/components/footer';
 import { PodiumCard } from '@/components/leaderboard/PodiumCard';
 import { apiGet } from '@/lib/apiClient';
 import { getSocket } from '@/lib/socketClient';
-import { Loader2, Trophy, AlertCircle } from 'lucide-react';
+import { Loader2, Trophy, AlertCircle, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Standing {
@@ -21,6 +21,7 @@ interface Standing {
   points: number;
   setDiff?: number;
   pointDiff?: number;
+  trend?: 'up' | 'down' | 'neutral';
 }
 
 interface Event {
@@ -101,6 +102,7 @@ function LeaderboardContent() {
           points: item.points || 0,
           setDiff: item.setDiff,
           pointDiff: item.pointDiff,
+          trend: item.trend || 'neutral',
         }));
 
         setStandings(mappedStandings);
@@ -229,9 +231,12 @@ function LeaderboardContent() {
                       {rest.map((player) => (
                         <tr key={player.playerId} className="hover:bg-muted/50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="font-mono font-bold text-muted-foreground">
-                              #{player.rank}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-muted-foreground">
+                                #{player.rank}
+                                </span>
+                                {player.trend === 'up' ? <ArrowUp className="w-3 h-3 text-emerald-500" /> : player.trend === 'down' ? <ArrowDown className="w-3 h-3 text-red-500" /> : <Minus className="w-3 h-3 text-slate-300" />}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-semibold text-foreground">{player.name}</div>
