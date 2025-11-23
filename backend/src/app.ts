@@ -1,35 +1,49 @@
-import express from 'express';
-import cors from 'cors';
+import express, { Express } from 'express';
 import { json } from 'body-parser';
+import cookieParser from 'cookie-parser';
+import { applySecurityMiddleware, authRateLimiter } from './middleware/security';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { authenticate } from './middlewares/auth';
+import { requestLogger } from './middlewares/requestLogger';
+import { performanceMonitor } from './middlewares/performance';
 
-// Import Routes
-import matchRoutes from './routes/match.routes';
-import playerRoutes from './routes/player.routes';
-import fixtureRoutes from './routes/fixture.routes';
-import tournamentRoutes from './routes/tournament.routes';
-import eventRoutes from './routes/event.routes';
-import clubRoutes from './routes/club.routes';
+import authRouter from './routers/authRouter';
+import eventRouter from './routers/eventRouter';
+import fixtureRouter from './routers/fixtureRouter';
+import scheduleRouter from './routers/scheduleRouter';
+import leaderboardRouter from './routers/leaderboardRouter';
+import matchRouter from './routers/matchRouter';
+import analyticsRouter from './routers/analyticsRouter';
 
-export const app = express();
+export const app: Express = express();
 
-app.use(cors());
-app.use(json());
+applySecurityMiddleware(app);
 
-// Health Check
+app.use(performanceMonitor);
+app.use(requestLogger);
+app.use(json({ limit: '10mb' }));
+app.use(cookieParser());
+
+app.use(authenticate);
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'UP', timestamp: new Date() });
+  res.json({
+    success: true,
+    data: {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+    },
+  });
 });
 
-// Routes Registration
-app.use('/api/tournaments', tournamentRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/clubs', clubRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/players', playerRoutes);
-app.use('/api/fixtures', fixtureRoutes);
+app.use('/api/auth', authRateLimiter, authRouter);
+app.use('/api/events', eventRouter);
+app.use('/api', fixtureRouter);
+app.use('/api', leaderboardRouter);
+app.use('/api', analyticsRouter);
+app.use('/api/schedule', scheduleRouter);
+app.use('/api/matches', matchRouter);
 
-// Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!', details: err.message });
-});
+app.use(notFoundHandler);
+app.use(errorHandler);

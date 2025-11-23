@@ -3,16 +3,18 @@ import prisma from '../lib/db';
 
 // Create a new player with unique ID and details
 export const createPlayer = async (req: Request, res: Response) => {
-  const { name, weight, category, description, clubId } = req.body;
-  
+  const { name, email, gender, weight, category, description, clubId } = req.body;
+
   if (!name) {
     return res.status(400).json({ error: 'Player name is required' });
   }
-  
+
   try {
     const player = await prisma.player.create({
       data: {
         name,
+        email,
+        gender,
         weight,
         category,
         description,
@@ -51,7 +53,7 @@ export const getAllPlayers = async (req: Request, res: Response) => {
 // Get a single player by ID
 export const getPlayerById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     const player = await prisma.player.findUnique({
       where: { id },
@@ -64,11 +66,11 @@ export const getPlayerById = async (req: Request, res: Response) => {
         },
       },
     });
-    
+
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
     }
-    
+
     res.json({ success: true, player });
   } catch (error: any) {
     console.error('Error fetching player:', error);
@@ -79,20 +81,22 @@ export const getPlayerById = async (req: Request, res: Response) => {
 // Update player details
 export const updatePlayer = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, weight, category, description, clubId } = req.body;
-  
+  const { name, email, gender, weight, category, description, clubId } = req.body;
+
   try {
     const player = await prisma.player.update({
       where: { id },
       data: {
         name,
+        email,
+        gender,
         weight,
         category,
         description,
         clubId,
       },
     });
-    
+
     res.json({
       success: true,
       message: 'Player updated successfully',
@@ -110,12 +114,12 @@ export const updatePlayer = async (req: Request, res: Response) => {
 // Delete a player
 export const deletePlayer = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     await prisma.player.delete({
       where: { id },
     });
-    
+
     res.json({
       success: true,
       message: 'Player deleted successfully',

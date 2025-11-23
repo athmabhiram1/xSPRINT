@@ -1,0 +1,95 @@
+﻿
+> xsprint-backend@1.0.0 build
+> tsc
+
+src/__tests__/leaderboard.test.ts(69,50): error TS2339: Property 'getSimpleLeaderboard' does not exist on type 'typeof LeaderboardService'.
+src/__tests__/leaderboard.test.ts(92,50): error TS2339: Property 'getDetailedLeaderboard' does not exist on type 'typeof LeaderboardService'.
+src/controllers/AuthController.ts(12,7): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/controllers/LeaderboardController.ts(15,50): error TS2339: Property 'getSimpleLeaderboard' does not exist on type 'typeof LeaderboardService'.
+src/controllers/LeaderboardController.ts(33,50): error TS2339: Property 'getDetailedLeaderboard' does not exist on type 'typeof LeaderboardService'.
+src/controllers/MatchController.ts(85,24): error TS2339: Property 'invalidateLeaderboardCache' does not exist on type 'typeof LeaderboardService'.
+src/middleware/security.ts(3,25): error TS7016: Could not find a declaration file for module 'compression'. 'C:/Users/athma/OneDrive/Desktop/my projects/xsprint/backend/node_modules/compression/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/compression` if it exists or add a new declaration (.d.ts) file containing `declare module 'compression';`
+src/routes/analytics.routes.ts(2,10): error TS2305: Module '"../middleware/errorHandler"' has no exported member 'asyncHandler'.
+src/routes/analytics.routes.ts(3,10): error TS2305: Module '"../utils/responseFormatter"' has no exported member 'successResponse'.
+src/routes/analytics.routes.ts(18,25): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/analytics.routes.ts(18,30): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/analytics.routes.ts(34,25): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/analytics.routes.ts(34,30): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/auth.routes.ts(90,27): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/routes/auth.routes.ts(166,27): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/routes/auth.routes.ts(233,27): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Secret | Buffer<ArrayBufferLike> | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/routes/event.routes.ts(10,3): error TS2305: Module '"../controllers/LeaderboardController"' has no exported member 'getEventStandings'.
+src/routes/event.routes.ts(11,3): error TS2305: Module '"../controllers/LeaderboardController"' has no exported member 'getEventAnalytics'.
+src/routes/match.routes.ts(4,5): error TS2305: Module '"../controllers/MatchController"' has no exported member 'updateMatch'.
+src/routes/schedule.routes.ts(2,10): error TS2305: Module '"../controllers/ScheduleController"' has no exported member 'autoScheduleMatches'.
+src/routes/schedule.routes.ts(2,31): error TS2305: Module '"../controllers/ScheduleController"' has no exported member 'getSchedule'.
+src/routes/schedule.routes.ts(2,44): error TS2305: Module '"../controllers/ScheduleController"' has no exported member 'updateSchedule'.
+src/scripts/seed-users.ts(47,39): error TS18048: 'result.user' is possibly 'undefined'.
+src/scripts/seed-users.ts(47,61): error TS18048: 'result.user' is possibly 'undefined'.
+src/scripts/test_flow.ts(142,21): error TS2353: Object literal may only specify known properties, and 'code' does not exist in type '(Without<MatchCodeUpdateInput, MatchCodeUncheckedUpdateInput> & MatchCodeUncheckedUpdateInput) | (Without<...> & MatchCodeUpdateInput)'.
+src/services/ScheduleEngine.ts(257,46): error TS2307: Cannot find module './FixtureEngine' or its corresponding type declarations.
+src/services/ScheduleEngine.ts(306,35): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 5, '(vd: VarDate): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'VarDate'.
+      Type 'null' is not assignable to type 'VarDate'.
+  Overload 3 of 5, '(value: string | number): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+src/services/ScheduleEngine.ts(306,67): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 5, '(vd: VarDate): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'VarDate'.
+      Type 'null' is not assignable to type 'VarDate'.
+  Overload 3 of 5, '(value: string | number): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+src/services/ScheduleEngine.ts(345,38): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 5, '(vd: VarDate): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'VarDate'.
+      Type 'null' is not assignable to type 'VarDate'.
+  Overload 3 of 5, '(value: string | number): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+src/utils/validation.ts(53,17): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+src/utils/validation.ts(53,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/utils/validation.ts(64,7): error TS2322: Type 'output<T>' is not assignable to type 'ParamsDictionary'.
+  Type 'unknown' is not assignable to type 'ParamsDictionary'.
+src/utils/validation.ts(69,17): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+src/utils/validation.ts(69,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/utils/validation.ts(80,7): error TS2322: Type 'output<T>' is not assignable to type 'ParsedQs'.
+  Type 'unknown' is not assignable to type 'ParsedQs'.
+src/utils/validation.ts(85,17): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+src/utils/validation.ts(85,28): error TS7006: Parameter 'e' implicitly has an 'any' type.

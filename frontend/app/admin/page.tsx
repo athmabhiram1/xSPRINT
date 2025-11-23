@@ -7,9 +7,13 @@ import { Users, Trophy, Grid3x3, Clock, Settings, Lock } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { FixtureGenerator } from "@/components/fixture-generator"
+import { ScheduleGenerator } from "@/components/schedule-generator"
 
 const menuItems = [
   { label: "Dashboard", icon: Trophy, href: "/admin" },
+  { label: "Tournaments", icon: Trophy, href: "/admin/tournaments" },
+  { label: "Clubs", icon: Users, href: "/admin/clubs" },
   { label: "Players", icon: Users, href: "/admin/players" },
   { label: "Fixtures", icon: Grid3x3, href: "/admin/fixtures" },
   { label: "Schedule", icon: Clock, href: "/admin/schedule" },
@@ -20,6 +24,8 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [fixtureDialogOpen, setFixtureDialogOpen] = useState(false)
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -108,14 +114,18 @@ export default function AdminDashboard() {
             {/* Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-6 rounded-xl border border-primary/20">
-                 <h3 className="font-bold text-lg mb-2">Fixture Management</h3>
-                 <p className="text-sm text-muted-foreground mb-4">Generate brackets for upcoming tournaments.</p>
-                 <Button size="lg" className="w-full">Generate Fixtures</Button>
+                <h3 className="font-bold text-lg mb-2">Fixture Management</h3>
+                <p className="text-sm text-muted-foreground mb-4">Generate brackets for upcoming tournaments.</p>
+                <Button size="lg" className="w-full" onClick={() => setFixtureDialogOpen(true)}>
+                  Generate Fixtures
+                </Button>
               </div>
               <div className="bg-gradient-to-br from-secondary/5 to-secondary/10 p-6 rounded-xl border border-secondary/20">
-                 <h3 className="font-bold text-lg mb-2">Schedule Management</h3>
-                 <p className="text-sm text-muted-foreground mb-4">Auto-assign courts and timeslots.</p>
-                 <Button size="lg" variant="outline" className="w-full bg-background">Generate Schedule</Button>
+                <h3 className="font-bold text-lg mb-2">Schedule Management</h3>
+                <p className="text-sm text-muted-foreground mb-4">Auto-assign courts and timeslots.</p>
+                <Button size="lg" variant="outline" className="w-full bg-background" onClick={() => setScheduleDialogOpen(true)}>
+                  Generate Schedule
+                </Button>
               </div>
             </div>
 
@@ -147,11 +157,10 @@ export default function AdminDashboard() {
                           <td className="p-4 text-muted-foreground">{player.club}</td>
                           <td className="p-4">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                player.status === "Approved"
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              }`}
+                              className={`px-2 py-1 rounded-full text-xs font-bold ${player.status === "Approved"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                }`}
                             >
                               {player.status}
                             </span>
@@ -189,13 +198,12 @@ export default function AdminDashboard() {
                           <td className="p-4 text-muted-foreground">{m.court}</td>
                           <td className="p-4">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                m.status === "Live"
-                                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"
-                                  : m.status === "Completed"
-                                    ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                              }`}
+                              className={`px-2 py-1 rounded-full text-xs font-bold ${m.status === "Live"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"
+                                : m.status === "Completed"
+                                  ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                }`}
                             >
                               {m.status}
                             </span>
@@ -210,6 +218,27 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      {fixtureDialogOpen && (
+        <FixtureGenerator
+          eventId="temp-event-id"
+          eventName="Sample Event"
+          onSuccess={() => {
+            setFixtureDialogOpen(false);
+            // Optionally refresh data here
+          }}
+        />
+      )}
+      {scheduleDialogOpen && (
+        <ScheduleGenerator
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          onSuccess={() => {
+            // Optionally refresh data here
+          }}
+        />
+      )}
 
       <Footer />
     </div>

@@ -5,86 +5,49 @@ import { Footer } from "@/components/footer"
 import { TournamentCard } from "@/components/tournament-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Filter } from "lucide-react"
-import { useState } from "react"
-
-const mockTournaments = [
-  {
-    id: "1",
-    title: "Elite Badminton Championship",
-    image: "/badminton-championship.png",
-    location: "Mumbai, India",
-    date: "Dec 15-20, 2024",
-    category: "Pro",
-    sport: "Badminton",
-    participants: 128,
-  },
-  {
-    id: "2",
-    title: "Basketball National Cup",
-    image: "/basketball-tournament-national.jpg",
-    location: "Delhi, India",
-    date: "Dec 22-28, 2024",
-    category: "Semi-Pro",
-    sport: "Basketball",
-    participants: 64,
-  },
-  {
-    id: "3",
-    title: "Chess Open Tournament",
-    image: "/chess-tournament-competitive.jpg",
-    location: "Bangalore, India",
-    date: "Dec 25-27, 2024",
-    category: "Open",
-    sport: "Chess",
-    participants: 256,
-  },
-  {
-    id: "4",
-    title: "Pickleball Summer Series",
-    image: "/pickleball-tournament.png",
-    location: "Chennai, India",
-    date: "Jan 5-10, 2025",
-    category: "Amateur",
-    sport: "Pickleball",
-    participants: 96,
-  },
-  {
-    id: "5",
-    title: "Cricket Premier League",
-    image: "/cricket-tournament-premier.jpg",
-    location: "Pune, India",
-    date: "Jan 12-20, 2025",
-    category: "Pro",
-    sport: "Cricket",
-    participants: 48,
-  },
-  {
-    id: "6",
-    title: "Football Championship",
-    image: "/football-tournament-championship.jpg",
-    location: "Hyderabad, India",
-    date: "Jan 15-25, 2025",
-    category: "Semi-Pro",
-    sport: "Football",
-    participants: 80,
-  },
-]
+import { Search, Filter, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { getTournaments, Tournament, formatDate, getSportEmoji } from "@/lib/api"
 
 const categories = ["All", "Badminton", "Basketball", "Cricket", "Football", "Chess", "Pickleball"]
 
 export default function TournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredTournaments = mockTournaments.filter((tournament) => {
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        setLoading(true)
+        const data = await getTournaments({ includeEvents: true, includeCourts: true })
+        if (data.success) {
+          setTournaments(data.tournaments || [])
+        } else {
+          setError(data.error || "Failed to fetch tournaments")
+        }
+      } catch (err: any) {
+        console.error("Error fetching tournaments:", err)
+        setError(err.message || "Failed to fetch tournaments")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTournaments()
+  }, [])
+
+  const filteredTournaments = tournaments.filter((tournament) => {
     const matchesSearch =
-      tournament.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tournament.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tournament.location.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    // Fixed logic: Check if selectedCategory matches the tournament's sport
-    const matchesCategory = selectedCategory === "All" || tournament.sport === selectedCategory
-    
+
+    // Filter by sport if events exist
+    const matchesCategory = selectedCategory === "All" ||
+      tournament.events?.some(event => event.sport.toLowerCase() === selectedCategory.toLowerCase())
+
     return matchesSearch && matchesCategory
   })
 
@@ -125,11 +88,10 @@ export default function TournamentsPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
-                  selectedCategory === cat 
-                    ? "bg-primary text-secondary border-primary shadow-md shadow-primary/20" 
-                    : "bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
-                }`}
+                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${selectedCategory === cat
+                  ? "bg-primary text-secondary border-primary shadow-md shadow-primary/20"
+                  : "bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
+                  }`}
               >
                 {cat}
               </button>
@@ -141,20 +103,47 @@ export default function TournamentsPage() {
       {/* Tournament Grid */}
       <section className="section-spacing bg-muted/30">
         <div className="container-max">
-          {filteredTournaments.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="animate-spin text-primary" size={48} />
+            </div>
+          ) : error ? (
+            <div className="text-center py-20 bg-card rounded-xl border border-dashed border-red-300">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-xl font-bold mb-2">Error Loading Tournaments</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          ) : filteredTournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTournaments.map((tournament) => (
-                <TournamentCard key={tournament.id} {...tournament} />
-              ))}
+              {filteredTournaments.map((tournament) => {
+                // Get the primary sport from events
+                const primarySport = tournament.events?.[0]?.sport || "Tournament"
+
+                return (
+                  <TournamentCard
+                    key={tournament.id}
+                    id={tournament.id}
+                    title={tournament.name}
+                    image="/tournament-placeholder.png"
+                    location={tournament.location}
+                    date={`${formatDate(tournament.startDate)} - ${formatDate(tournament.endDate)}`}
+                    category={tournament.events?.length ? `${tournament.events.length} Events` : "Open"}
+                    participants={0}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-20 bg-card rounded-xl border border-dashed border-border">
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-xl font-bold mb-2">No tournaments found</h3>
               <p className="text-muted-foreground">Try adjusting your search or filters</p>
-              <Button 
-                variant="link" 
-                onClick={() => {setSearchTerm(""); setSelectedCategory("All")}}
+              <Button
+                variant="link"
+                onClick={() => { setSearchTerm(""); setSelectedCategory("All") }}
                 className="mt-2 text-primary"
               >
                 Clear all filters

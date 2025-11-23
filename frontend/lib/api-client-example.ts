@@ -28,10 +28,11 @@ export function useRealTournaments() {
     async function fetchData() {
       try {
         // Call the function from lib/api.ts
-        const data = await getTournaments() 
-        
-        // Assuming API returns { data: [...] } or just [...]
-        setTournaments(data)
+        const response = await getTournaments()
+
+        if (response.success && response.data) {
+          setTournaments(response.data)
+        }
       } catch (err) {
         console.error("Failed to fetch tournaments:", err)
         setError("Failed to load tournaments")

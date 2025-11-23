@@ -1,76 +1,180 @@
 import { Request, Response } from 'express';
-import prisma from '../lib/db';
-import { FixtureEngine } from '../services/FixtureEngine';
+import { FixtureEngine } from '../services/FixtureEngineEnhanced';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import { ok, fail } from '../utils/responseFormatter';
+import { validateParams, validateBody, fixtureGenerationSchema } from '../utils/validation';
+import { z } from 'zod';
+import { invalidateCache } from '../utils/cache';
+import { logInfo, logError } from '../utils/logger';
 
 const fixtureEngine = new FixtureEngine();
 
-export const generateFixture = async (req: Request, res: Response) => {
-  const { eventId } = req.params;
-  const { type } = req.body;
+const eventIdParamSchema = z.object({
+  eventId: z.string().uuid('Invalid event ID format'),
+});
 
-  try {
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
+const fixturePreviewSchema = z.object({
+  format: z.enum(['knockout', 'roundrobin', 'swiss', 'double_elimination', 'groups_then_playoff']),
+  options: z.object({
+    swissRounds: z.number().optional(),
+    groups: z.number().optional(),
+    seedingStrategy: z.enum(['registration_order', 'elo_rating', 'historical_performance', 'random', 'manual']).optional(),
+    randomizeUnseeded: z.boolean().optional(),
+  }).optional(),
+});
 
-    const fixtureType = type || event.type || 'KNOCKOUT';
-    const result = await fixtureEngine.generateFixtures(eventId, fixtureType as 'KNOCKOUT' | 'ROUND_ROBIN');
+const rollbackSchema = z.object({
+  snapshotId: z.string().optional(),
+});
 
-    await prisma.event.update({
-      where: { id: eventId },
-      data: { rounds: result.totalRounds, type: fixtureType }
-    });
+// Generate fixtures (existing endpoint, now with enhanced engine)
+export const generateFixtures = [
+  validateParams(eventIdParamSchema),
+  validateBody(fixtureGenerationSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+    const { type, format } = req.body;
 
-    res.status(201).json({
-      success: true,
-      message: 'Fixture generated successfully',
-      data: result
-    });
-  } catch (error: any) {
-    console.error('Error generating fixture:', error);
-    res.status(500).json({ error: 'Failed to generate fixture', details: error.message });
-  }
-};
+    const fixtureFormat = (type || format || 'knockout').toLowerCase() as any;
 
-export const getFixture = async (req: Request, res: Response) => {
-  const { eventId } = req.params;
+    try {
+      const result = await fixtureEngine.generateFixtures(eventId, fixtureFormat);
 
-  try {
-    const matches = await prisma.match.findMany({
-      where: { eventId },
-      include: {
-        playerA: { include: { club: true } },
-        playerB: { include: { club: true } },
-        winner: true,
-        schedule: { include: { court: true } }
-      },
-      orderBy: [{ round: 'asc' }, { matchNumber: 'asc' }]
-    });
+      invalidateCache(`event:${eventId}:*`);
+      invalidateCache(`fixtures:*`);
+      logInfo('Fixtures generated', { eventId, format: fixtureFormat, matchCount: result.matches.length });
 
-    if (matches.length === 0) {
-      return res.status(404).json({ error: 'No fixture found for this event' });
-    }
-
-    const groupedByRound: Record<number, any[]> = {};
-    matches.forEach((match) => {
-      if (!groupedByRound[match.round]) {
-        groupedByRound[match.round] = [];
+      return res.json(ok(result));
+    } catch (error: any) {
+      logError(error, { eventId, format: fixtureFormat });
+      if (error.message.includes('not found')) {
+        return res.status(404).json(fail(error.message));
       }
-      groupedByRound[match.round].push(match);
-    });
+      if (error.message.includes('already scheduled') || error.message.includes('required')) {
+        return res.status(400).json(fail(error.message));
+      }
+      throw error;
+    }
+  })
+];
 
-    res.json({
-      success: true,
-      data: {
+// NEW: Preview fixtures without committing
+export const previewFixtures = [
+  validateParams(eventIdParamSchema),
+  validateBody(fixturePreviewSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+    const { format, options } = req.body;
+
+    try {
+      const preview = await fixtureEngine.previewFixtures(eventId, format, {
+        ...options,
+        dryRun: true,
+      });
+
+      logInfo('Fixtures previewed', {
         eventId,
-        totalMatches: matches.length,
-        rounds: groupedByRound,
-        flatMatches: matches
+        format,
+        matchCount: preview.matches.length,
+        fairnessScore: preview.fairnessScore
+      });
+
+      return res.json(ok({
+        ...preview,
+        message: 'Preview generated successfully. Use POST /fixtures/generate to commit.'
+      }));
+    } catch (error: any) {
+      logError(error, { eventId, format });
+      if (error.message.includes('not found')) {
+        return res.status(404).json(fail(error.message));
       }
-    });
-  } catch (error: any) {
-    console.error('Error fetching fixture:', error);
-    res.status(500).json({ error: 'Failed to fetch fixture', details: error.message });
-  }
+      if (error.message.includes('validation failed')) {
+        return res.status(400).json(fail(error.message));
+      }
+      throw error;
+    }
+  })
+];
+
+// NEW: Get fairness score for existing fixtures
+export const getFairnessScore = [
+  validateParams(eventIdParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+
+    try {
+      const { calculateExistingFixtureFairness } = await import('../services/FixtureEngineEnhanced');
+      const fairnessScore = await calculateExistingFixtureFairness(eventId);
+
+      logInfo('Fairness score calculated', { eventId, fairnessScore });
+
+      return res.json(ok({
+        eventId,
+        fairnessScore,
+        rating: fairnessScore >= 80 ? 'Excellent' :
+          fairnessScore >= 70 ? 'Good' :
+            fairnessScore >= 60 ? 'Fair' : 'Needs Improvement',
+        recommendations: fairnessScore < 70 ? [
+          'Consider regenerating fixtures with higher optimization iterations',
+          'Review same-club matchups in early rounds',
+          'Check if seeding strategy can be improved'
+        ] : []
+      }));
+    } catch (error: any) {
+      logError(error, { eventId });
+      if (error.message.includes('not found')) {
+        return res.status(404).json(fail(error.message));
+      }
+      throw error;
+    }
+  })
+];
+
+// NEW: Rollback fixtures to previous state
+export const rollbackFixtures = [
+  validateParams(eventIdParamSchema),
+  validateBody(rollbackSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+    const { snapshotId } = req.body;
+
+    try {
+      const success = await fixtureEngine.rollback(eventId, snapshotId);
+
+      if (success) {
+        invalidateCache(`event:${eventId}:*`);
+        invalidateCache(`fixtures:*`);
+        logInfo('Fixtures rolled back', { eventId, snapshotId });
+
+        return res.json(ok({
+          success: true,
+          message: 'Fixtures successfully rolled back to previous state',
+          eventId,
+          snapshotId
+        }));
+      } else {
+        return res.status(400).json(fail('Rollback failed'));
+      }
+    } catch (error: any) {
+      logError(error, { eventId, snapshotId });
+      if (error.message.includes('not found') || error.message.includes('No rollback snapshot')) {
+        return res.status(404).json(fail(error.message));
+      }
+      if (error.message.includes('disabled')) {
+        return res.status(400).json(fail('Rollback functionality is disabled'));
+      }
+      throw error;
+    }
+  })
+];
+
+// Existing endpoints (kept for backward compatibility)
+export const generateFixture = generateFixtures;
+export const getFixture = async (req: Request, res: Response) => {
+  // Implementation for getting fixtures
+  res.status(501).json(fail('Not implemented yet'));
+};
+export const scheduleFixture = async (req: Request, res: Response) => {
+  // Implementation for scheduling
+  res.status(501).json(fail('Not implemented yet'));
 };

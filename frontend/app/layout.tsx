@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Manrope } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import ThemeToggle from '@/components/theme-toggle';
+import { AppProviders } from './providers';
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -36,10 +38,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${manrope.variable} font-sans antialiased bg-background text-foreground`}>
-        {children}
-        <Analytics />
+        <AppProviders>
+          <ThemeToggle />
+          {children}
+          <Analytics />
+        </AppProviders>
       </body>
     </html>
   )
