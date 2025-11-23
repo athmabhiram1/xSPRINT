@@ -16,7 +16,7 @@ exports.deletePlayer = exports.updatePlayer = exports.getPlayerById = exports.ge
 const db_1 = __importDefault(require("../lib/db"));
 // Create a new player with unique ID and details
 const createPlayer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, weight, category, description, clubId } = req.body;
+    const { name, email, gender, weight, category, description, clubId } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Player name is required' });
     }
@@ -24,6 +24,8 @@ const createPlayer = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const player = yield db_1.default.player.create({
             data: {
                 name,
+                email,
+                gender,
                 weight,
                 category,
                 description,
@@ -90,12 +92,14 @@ exports.getPlayerById = getPlayerById;
 // Update player details
 const updatePlayer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const { name, weight, category, description, clubId } = req.body;
+    const { name, email, gender, weight, category, description, clubId } = req.body;
     try {
         const player = yield db_1.default.player.update({
             where: { id },
             data: {
                 name,
+                email,
+                gender,
                 weight,
                 category,
                 description,

@@ -1,0 +1,337 @@
+### Test xSPRINT Tournament Management API
+### Make sure the backend server is running on http://localhost:5000
+
+##################################################
+# 1. CREATE CLUB
+##################################################
+POST http://localhost:5000/api/clubs
+Content-Type: application/json
+
+{
+  "name": "Thunder Badminton Club"
+}
+
+###
+
+POST http://localhost:5000/api/clubs
+Content-Type: application/json
+
+{
+  "name": "Lightning Sports Academy"
+}
+
+###
+
+##################################################
+# 2. GET ALL CLUBS
+##################################################
+GET http://localhost:5000/api/clubs
+
+###
+
+##################################################
+# 3. CREATE TOURNAMENT
+##################################################
+POST http://localhost:5000/api/tournaments
+Content-Type: application/json
+
+{
+  "name": "National Badminton Championship 2025",
+  "location": "Sports Complex Arena",
+  "startDate": "2025-12-01T09:00:00Z",
+  "endDate": "2025-12-05T18:00:00Z",
+  "courts": [
+    { "name": "Court 1" },
+    { "name": "Court 2" },
+    { "name": "Court 3" }
+  ]
+}
+
+###
+
+##################################################
+# 4. GET ALL TOURNAMENTS
+##################################################
+GET http://localhost:5000/api/tournaments
+
+###
+
+##################################################
+# 5. CREATE EVENT (Knockout - Men's Singles)
+##################################################
+# Replace {tournamentId} with actual ID from step 3
+POST http://localhost:5000/api/events
+Content-Type: application/json
+
+{
+  "tournamentId": "REPLACE_WITH_TOURNAMENT_ID",
+  "name": "Men's Singles",
+  "sport": "Badminton",
+  "type": "KNOCKOUT",
+  "gender": "Men's",
+  "category": "Senior"
+}
+
+###
+
+##################################################
+# 6. CREATE EVENT (Round Robin - Women's Doubles)
+##################################################
+POST http://localhost:5000/api/events
+Content-Type: application/json
+
+{
+  "tournamentId": "REPLACE_WITH_TOURNAMENT_ID",
+  "name": "Women's Doubles",
+  "sport": "Badminton",
+  "type": "ROUND_ROBIN",
+  "gender": "Women's",
+  "category": "Senior"
+}
+
+###
+
+##################################################
+# 7. CREATE PLAYERS
+##################################################
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "John Smith",
+  "email": "john.smith@example.com",
+  "gender": "Male",
+  "weight": "75kg",
+  "category": "Senior",
+  "clubId": "REPLACE_WITH_CLUB_ID"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Mike Johnson",
+  "email": "mike.j@example.com",
+  "gender": "Male",
+  "weight": "80kg",
+  "category": "Senior",
+  "clubId": "REPLACE_WITH_CLUB_ID"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Sarah Williams",
+  "email": "sarah.w@example.com",
+  "gender": "Female",
+  "weight": "60kg",
+  "category": "Senior"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Emma Davis",
+  "email": "emma.d@example.com",
+  "gender": "Female",
+  "weight": "58kg",
+  "category": "Senior"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Chris Brown",
+  "email": "chris.b@example.com",
+  "gender": "Male",
+  "weight": "72kg",
+  "category": "Senior"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Alex Taylor",
+  "email": "alex.t@example.com",
+  "gender": "Male",
+  "weight": "78kg",
+  "category": "Senior"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "Lisa Anderson",
+  "email": "lisa.a@example.com",
+  "gender": "Female",
+  "weight": "62kg",
+  "category": "Senior"
+}
+
+###
+
+POST http://localhost:5000/api/players
+Content-Type: application/json
+
+{
+  "name": "David Wilson",
+  "email": "david.w@example.com",
+  "gender": "Male",
+  "weight": "85kg",
+  "category": "Senior"
+}
+
+###
+
+##################################################
+# 8. GET ALL PLAYERS
+##################################################
+GET http://localhost:5000/api/players
+
+###
+
+##################################################
+# 9. REGISTER PLAYERS TO EVENT (Men's Singles)
+##################################################
+POST http://localhost:5000/api/events/register
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "playerId": "REPLACE_WITH_PLAYER1_ID",
+  "seed": 1
+}
+
+###
+
+POST http://localhost:5000/api/events/register
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "playerId": "REPLACE_WITH_PLAYER2_ID",
+  "seed": 2
+}
+
+###
+
+POST http://localhost:5000/api/events/register
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "playerId": "REPLACE_WITH_PLAYER3_ID",
+  "seed": 3
+}
+
+###
+
+POST http://localhost:5000/api/events/register
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "playerId": "REPLACE_WITH_PLAYER4_ID",
+  "seed": 4
+}
+
+###
+
+POST http://localhost:5000/api/events/register
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "playerId": "REPLACE_WITH_PLAYER5_ID"
+}
+
+###
+
+##################################################
+# 10. GET EVENT REGISTRATIONS
+##################################################
+GET http://localhost:5000/api/events/REPLACE_WITH_EVENT_ID/registrations
+
+###
+
+##################################################
+# 11. GENERATE FIXTURES (Knockout)
+##################################################
+POST http://localhost:5000/api/fixtures/generate
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_EVENT_ID",
+  "type": "KNOCKOUT"
+}
+
+###
+
+##################################################
+# 12. GENERATE FIXTURES (Round Robin)
+##################################################
+POST http://localhost:5000/api/fixtures/generate
+Content-Type: application/json
+
+{
+  "eventId": "REPLACE_WITH_WOMENS_DOUBLES_EVENT_ID",
+  "type": "ROUND_ROBIN"
+}
+
+###
+
+##################################################
+# 13. GET FIXTURES FOR EVENT
+##################################################
+GET http://localhost:5000/api/fixtures/event/REPLACE_WITH_EVENT_ID
+
+###
+
+##################################################
+# 14. UPDATE MATCH SCORE
+##################################################
+PATCH http://localhost:5000/api/fixtures/match/REPLACE_WITH_MATCH_ID
+Content-Type: application/json
+
+{
+  "winnerId": "REPLACE_WITH_WINNER_PLAYER_ID",
+  "score": {
+    "sets": [
+      { "a": 21, "b": 18 },
+      { "a": 21, "b": 19 }
+    ]
+  }
+}
+
+###
+
+##################################################
+# 15. GET TOURNAMENT DETAILS
+##################################################
+GET http://localhost:5000/api/tournaments/REPLACE_WITH_TOURNAMENT_ID
+
+###
+
+##################################################
+# 16. GET EVENTS BY TOURNAMENT
+##################################################
+GET http://localhost:5000/api/events/tournament/REPLACE_WITH_TOURNAMENT_ID
+
+###

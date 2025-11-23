@@ -34,7 +34,7 @@ export function Navbar() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-secondary font-bold text-lg">X</span>
           </div>
-          <span className="font-heading font-bold text-lg hidden sm:inline">Xthlete</span>
+          <span className="font-heading font-bold text-lg hidden sm:inline">xSPRINT</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
@@ -48,26 +48,26 @@ export function Navbar() {
             Leaderboard
           </Link>
           {isAdmin && (
-             <Link href="/admin" className="text-sm font-medium text-primary transition-colors">
-             Admin Panel
-           </Link>
+            <Link href="/admin" className="text-sm font-medium text-primary transition-colors">
+              Admin Panel
+            </Link>
           )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
           {isLoggedIn ? (
-             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/profile">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </Button>
-             </div>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           ) : (
             <>
               <Button variant="outline" asChild>
@@ -98,15 +98,15 @@ export function Navbar() {
               Leaderboard
             </Link>
             {isAdmin && (
-               <Link href="/admin" className="text-sm font-medium text-primary">
-               Admin Panel
-             </Link>
+              <Link href="/admin" className="text-sm font-medium text-primary">
+                Admin Panel
+              </Link>
             )}
             <div className="flex flex-col gap-2 pt-2">
               {isLoggedIn ? (
-                 <Button variant="outline" onClick={handleLogout} className="w-full">
-                    Logout
-                 </Button>
+                <Button variant="outline" onClick={handleLogout} className="w-full">
+                  Logout
+                </Button>
               ) : (
                 <>
                   <Button variant="outline" asChild className="w-full bg-transparent">

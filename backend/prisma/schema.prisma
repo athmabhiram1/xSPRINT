@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   ADMIN
   UMPIRE
+  ORGANIZER
   VIEWER
 }
 
@@ -23,14 +24,17 @@ enum MatchStatus {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(VIEWER)
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(VIEWER)
   
   // Relations
-  umpiredMatches Match[] @relation("Umpire")
+  umpiredMatches     Match[]     @relation("Umpire")
+  assignedMatchCodes MatchCode[] @relation("AssignedUmpire")
+  resultAudits       MatchResultAudit[]
+  codeUsages         MatchCodeUsage[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,6 +42,7 @@ model User {
 
 model Player {
   id            String         @id @default(uuid())
+  playerId      String         @unique @default(cuid()) // Unique player ID (e.g., XS-ABC123)
   name          String
   email         String?        @unique
   gender        String?
@@ -47,6 +52,12 @@ model Player {
   clubId        String?
   club          Club?          @relation(fields: [clubId], references: [id])
   registrations Registration[]
+  lockers       Locker[]       // Locker assignments
+  stats         PlayerStats?   // Overall statistics
+  
+  // Enhanced Fixture Engine fields
+  elo           Int?           // ELO rating for advanced seeding
+  region        String?        // Geographic region for distribution optimization
   
   matchesAsA    Match[]        @relation("PlayerA")
   matchesAsB    Match[]        @relation("PlayerB")
@@ -57,18 +68,22 @@ model Player {
 }
 
 model Club {
-  id      String   @id @default(uuid())
-  name    String   @unique
-  players Player[]
+  id          String   @id @default(uuid())
+  name        String   @unique
+  location    String?
+  description String?
+  players     Player[]
 }
 
 model Tournament {
   id        String   @id @default(uuid())
   name      String
+  location  String?
   startDate DateTime
   endDate   DateTime
   events    Event[]
   courts    Court[]
+  lockers   Locker[] // Locker assignments for this tournament
 }
 
 model Event {
@@ -131,6 +146,10 @@ model Match {
   metadata      Json?    // { bestOf: 3, category: "U15" }
   status        MatchStatus @default(PENDING)
   
+  // Enhanced Fixture Engine fields
+  isLosersBracket Boolean @default(false)  // For double elimination
+  bracketPosition Int?                      // For advanced bracket tracking
+  
   // Propagation Logic
   nextMatchId   String?
   nextMatch     Match?   @relation("NextMatch", fields: [nextMatchId], references: [id])
@@ -139,6 +158,10 @@ model Match {
   matchCode     MatchCode?
   schedule      ScheduleBlock?
   
+  // Audit Relations
+  resultAudits  MatchResultAudit[]
+  codeUsages    MatchCodeUsage[]
+  
   startTime     DateTime? // Denormalized for quick access
   endTime       DateTime?
   
@@ -146,12 +169,15 @@ model Match {
 }
 
 model MatchCode {
-  id        String   @id @default(uuid())
-  matchId   String   @unique
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  codeHash  String
-  isActive  Boolean  @default(true)
-  expiresAt DateTime
+  id               String   @id @default(cuid())
+  matchId          String   @unique
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  assignedUmpireId String
+  assignedUmpire   User     @relation("AssignedUmpire", fields: [assignedUmpireId], references: [id])
+  codeHash         String
+  isActive         Boolean  @default(true)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
 }
 
 model ScheduleBlock {
@@ -164,9 +190,69 @@ model ScheduleBlock {
   endTime   DateTime
 }
 
+model Locker {
+  id            String     @id @default(uuid())
+  lockerNumber  String
+  playerId      String
+  player        Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  sport         String     // Only for Basketball, Cricket, Football
+  assignedAt    DateTime   @default(now())
+  
+  @@unique([lockerNumber, tournamentId])
+}
+
+model PlayerStats {
+  id           String   @id @default(uuid())
+  playerId     String   @unique
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  totalMatches Int      @default(0)
+  totalWins    Int      @default(0)
+  totalLosses  Int      @default(0)
+  totalPoints  Int      @default(0)
+  winRate      Float    @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 model AdminLog {
   id        String   @id @default(uuid())
   action    String
   details   String
   createdAt DateTime @default(now())
+}
+
+model MatchResultAudit {
+  id         String   @id @default(cuid())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId    String
+  actor      User?    @relation(fields: [actorId], references: [id])
+  actorId    String?
+  action     String   // e.g. 'SUBMIT_RESULT', 'EDIT_RESULT'
+  payload    Json?
+  createdAt  DateTime @default(now())
+}
+
+model MatchCodeUsage {
+  id         String   @id @default(cuid())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId    String
+  umpire     User?    @relation(fields: [umpireId], references: [id])
+  umpireId   String?
+  ip         String?
+  success    Boolean
+  createdAt  DateTime @default(now())
+}
+
+model FixtureSnapshot {
+  id          String   @id @default(cuid())
+  eventId     String
+  snapshotData Json    // Stores complete fixture state for rollback
+  fairnessScore Float?
+  metadata    Json?    // Additional info like format, options used
+  createdBy   String?  // User who created this snapshot
+  createdAt   DateTime @default(now())
+  
+  @@index([eventId])
+  @@index([createdAt])
 }

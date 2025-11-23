@@ -1,0 +1,140 @@
+﻿
+> xthlete-frontend@1.0.0 build
+> next build
+
+   Γû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+node.exe : Error: Cannot apply 
+unknown utility class `ease-out`
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~
+    + CategoryInfo          : Not 
+   Specified: (Error: Cannot a..  
+  .lass `ease-out`:String) [],    
+ RemoteException
+    + FullyQualifiedErrorId : Nat 
+   iveCommandError
+ 
+    [2m[at onInvalidCandidate (C:
+\Users\athma\OneDrive\Desktop\my p
+rojects\xsprint\frontend\node_modu
+les\tailwindcss\dist\lib.js:21:151
+1)][0m
+    [2m[at Te (C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\node_modules\tailwindcss\
+dist\lib.js:16:36364)][0m
+    [2m[at C:\Users\athma\OneDriv
+e\Desktop\my projects\xsprint\fron
+tend\node_modules\tailwindcss\dist
+\lib.js:21:355][0m
+    [2m[at Tr (C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\node_modules\tailwindcss\
+dist\lib.js:3:1718)][0m
+    [2m[at _ (C:\Users\athma\OneD
+rive\Desktop\my projects\xsprint\f
+rontend\node_modules\tailwindcss\d
+ist\lib.js:3:1377)][0m
+    [2m[at Se (C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\node_modules\tailwindcss\
+dist\lib.js:21:172)][0m
+    [2m[at ln (C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\node_modules\tailwindcss\
+dist\lib.js:38:294)][0m
+    [2m[at 
+process.processTicksAndRejections 
+(node:internal/process/task_queues
+:105:5)][0m
+    [2m[at async sn (C:\Users\ath
+ma\OneDrive\Desktop\my projects\xs
+print\frontend\node_modules\tailwi
+ndcss\dist\lib.js:38:631)][0m
+    [2m[at async Qr (C:\Users\ath
+ma\OneDrive\Desktop\my projects\xs
+print\frontend\node_modules\@tailw
+indcss\node\dist\index.js:10:3385)
+][0m
+
+> Build error occurred
+Error: Turbopack build failed 
+with 1 errors:
+./app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Us
+ers\athma\OneDrive\Desktop\my proj
+ects\xsprint\frontend\app\globals.
+css:1:1: Cannot apply unknown 
+utility class `ease-out`
+    at Input.error (node_modules/p
+ostcss/lib/input.js:135:16) [C:\Us
+ers\athma\OneDrive\Desktop\my proj
+ects\xsprint\frontend\.next\build\
+chunks\node_modules_2d7da256._.js:
+4651:22]
+    at Root.error (node_modules/po
+stcss/lib/node.js:146:32) [C:\User
+s\athma\OneDrive\Desktop\my projec
+ts\xsprint\frontend\.next\build\ch
+unks\node_modules_2d7da256._.js:92
+8:38]
+    [at Object.Once (C:\Users\athm
+a\OneDrive\Desktop\my projects\xsp
+rint\frontend\node_modules\@tailwi
+ndcss\postcss\dist\index.js:10:691
+2)]
+    [at 
+process.processTicksAndRejections 
+(node:internal/process/task_queues
+:105:5)]
+    at async LazyResult.runAsync (
+node_modules/postcss/lib/lazy-resu
+lt.js:293:11) [C:\Users\athma\OneD
+rive\Desktop\my projects\xsprint\f
+rontend\.next\build\chunks\node_mo
+dules_2d7da256._.js:6206:21]
+    at async transform (turbopack:
+///[turbopack-node]/transforms/pos
+tcss.ts:70:34) [C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\.next\build\chunks\[root-
+of-the-server]__51225daf._.js:146:
+36]
+    at async run (turbopack:///[tu
+rbopack-node]/ipc/evaluate.ts:92:2
+3) [C:\Users\athma\OneDrive\Deskto
+p\my projects\xsprint\frontend\.ne
+xt\build\chunks\[root-of-the-serve
+r]__974941ed._.js:443:31]
+
+Import trace:
+  Client Component Browser:
+    ./app/globals.css [Client 
+Component Browser]
+    ./app/layout.tsx [Server 
+Component]
+
+
+    at async transform (turbopack:
+///[turbopack-node]/transforms/pos
+tcss.ts:70:34) [C:\Users\athma\One
+Drive\Desktop\my projects\xsprint\
+frontend\.next\build\chunks\[root-
+of-the-server]__51225daf._.js:146:
+36])
+    at async run (turbopack:///[tu
+rbopack-node]/ipc/evaluate.ts:92:2
+3) [C:\Users\athma\OneDrive\Deskto
+p\my projects\xsprint\frontend\.ne
+xt\build\chunks\[root-of-the-serve
+r]__974941ed._.js:443:31])

@@ -1,0 +1,75 @@
+/* globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@400;600;700&display=swap');
+
+:root {
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+  --bg-light: hsl(0, 0%, 100%);
+  --bg-dark: hsl(222, 15%, 10%);
+  --fg-light: hsl(222, 15%, 15%);
+  --fg-dark: hsl(0, 0%, 90%);
+  --primary: hsl(210, 80%, 55%);
+  --primary-dark: hsl(210, 80%, 45%);
+}
+
+html {
+  background-color: var(--bg-light);
+  color: var(--fg-light);
+  font-family: var(--font-sans);
+}
+
+html.dark {
+  background-color: var(--bg-dark);
+  color: var(--fg-dark);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.container-max {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.button:hover {
+  background: var(--primary-dark);
+}
+
+/* Card hover effect */
+.card {
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+html.dark .card {
+  border-color: #2d3748;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

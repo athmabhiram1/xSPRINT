@@ -1,20 +1,13 @@
 /**
  * Prisma Database Client
- * NeonDB Connection
+ * NOTE: Frontend doesn't need direct database access.
+ * All data access should go through the backend API.
+ * This file is kept for reference but not used.
  */
 
-import { PrismaClient } from '@prisma/client';
+// Frontend applications should not have direct database access
+// Use the API client in @/lib/api instead
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+export const prisma = null;
+export default null;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
-
-export default prisma;

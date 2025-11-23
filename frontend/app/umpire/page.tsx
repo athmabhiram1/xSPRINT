@@ -5,29 +5,99 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-import { Lock, Plus, Minus, CheckCircle } from "lucide-react"
+import { Lock, CheckCircle, Loader2, AlertCircle } from "lucide-react"
+import { validateMatchCode, submitMatchResult, Match } from "@/lib/api"
 
 export default function UmpirePage() {
   const [matchCode, setMatchCode] = useState("")
+  const [matchId, setMatchId] = useState("")
   const [isUnlocked, setIsUnlocked] = useState(false)
-  const [scoreA, setScoreA] = useState(0)
-  const [scoreB, setScoreB] = useState(0)
-  const [currentSet, setCurrentSet] = useState(1)
+  const [match, setMatch] = useState<Match | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleUnlock = () => {
-    if (matchCode === "123456") {
-      setIsUnlocked(true)
+  // Score tracking
+  const [sets, setSets] = useState<Array<{ a: number; b: number }>>([{ a: 0, b: 0 }])
+  const [currentSet, setCurrentSet] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleUnlock = async () => {
+    if (!matchId || !matchCode) {
+      setError("Please enter both Match ID and Match Code")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await validateMatchCode(matchId, matchCode)
+      if (response.success && response.match) {
+        setMatch(response.match)
+        setIsUnlocked(true)
+      } else {
+        setError("Invalid match code or match not found")
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to validate match code")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleSubmit = () => {
-    alert(`Match result submitted: ${scoreA} - ${scoreB}`)
+  const updateScore = (player: 'a' | 'b', delta: number) => {
+    const newSets = [...sets]
+    newSets[currentSet][player] = Math.max(0, newSets[currentSet][player] + delta)
+    setSets(newSets)
   }
 
   const handleNextSet = () => {
-    setScoreA(0)
-    setScoreB(0)
+    setSets([...sets, { a: 0, b: 0 }])
     setCurrentSet(currentSet + 1)
+  }
+
+  const handleSubmit = async () => {
+    if (!match) return
+
+    // Determine winner based on sets won
+    const setsWonA = sets.filter(set => set.a > set.b).length
+    const setsWonB = sets.filter(set => set.b > set.a).length
+
+    const winnerId = setsWonA > setsWonB ? match.playerAId : match.playerBId
+
+    if (!winnerId) {
+      setError("Cannot determine winner. Please ensure all sets are completed.")
+      return
+    }
+
+    setSubmitting(true)
+    setError("")
+
+    try {
+      const response = await submitMatchResult({
+        matchId: match.id,
+        code: matchCode,
+        score: { sets },
+        winnerId
+      })
+
+      if (response.success) {
+        alert("Match result submitted successfully!")
+        // Reset form
+        setIsUnlocked(false)
+        setMatchCode("")
+        setMatchId("")
+        setMatch(null)
+        setSets([{ a: 0, b: 0 }])
+        setCurrentSet(0)
+      } else {
+        setError("Failed to submit match result")
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to submit match result")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -44,6 +114,24 @@ export default function UmpirePage() {
           {!isUnlocked ? (
             // Match Code Input Screen
             <div className="bg-card rounded-lg border border-border p-8 space-y-6">
+              {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="text-destructive mt-0.5" size={20} />
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold mb-3">Match ID</label>
+                <Input
+                  type="text"
+                  placeholder="Enter Match ID"
+                  className="text-center font-mono"
+                  value={matchId}
+                  onChange={(e) => setMatchId(e.target.value)}
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-3">Match Code</label>
                 <div className="relative">
@@ -54,52 +142,84 @@ export default function UmpirePage() {
                     maxLength={6}
                     className="pl-10 text-center text-2xl font-mono tracking-widest"
                     value={matchCode}
-                    onChange={(e) => setMatchCode(e.target.value.toUpperCase())}
+                    onChange={(e) => setMatchCode(e.target.value)}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Demo code: 123456</p>
               </div>
 
-              <Button size="lg" className="w-full" onClick={handleUnlock}>
-                Unlock Match
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleUnlock}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 animate-spin" size={20} />
+                    Validating...
+                  </>
+                ) : (
+                  "Unlock Match"
+                )}
               </Button>
             </div>
           ) : (
             // Scoring Panel
             <div className="bg-card rounded-lg border border-border p-8 space-y-8">
+              {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="text-destructive mt-0.5" size={20} />
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+
               {/* Match Info */}
               <div className="bg-muted rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-heading font-bold">Match Details</h3>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">Set {currentSet}</div>
+                    <div className="text-2xl font-bold text-primary">Set {currentSet + 1}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Player A</p>
-                    <p className="font-semibold">Saina Nehwal</p>
+                    <p className="font-semibold">{match?.playerA?.name || "TBD"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Club A</p>
-                    <p className="font-semibold">Mumbai Sports</p>
+                    <p className="font-semibold">{match?.playerA?.club?.name || "-"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Player B</p>
-                    <p className="font-semibold">PV Sindhu</p>
+                    <p className="font-semibold">{match?.playerB?.name || "TBD"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Club B</p>
-                    <p className="font-semibold">Delhi Elite</p>
+                    <p className="font-semibold">{match?.playerB?.club?.name || "-"}</p>
                   </div>
                 </div>
               </div>
 
+              {/* Set History */}
+              {sets.length > 1 && (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-semibold mb-2">Previous Sets</p>
+                  <div className="flex gap-2">
+                    {sets.slice(0, -1).map((set, idx) => (
+                      <div key={idx} className="bg-background rounded px-3 py-1 text-sm font-mono">
+                        Set {idx + 1}: {set.a} - {set.b}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Scoreboard */}
               <div className="grid grid-cols-2 gap-6">
                 {[
-                  { name: "Saina Nehwal", club: "Mumbai", score: scoreA, setScore: setScoreA },
-                  { name: "PV Sindhu", club: "Delhi", score: scoreB, setScore: setScoreB },
+                  { name: match?.playerA?.name || "Player A", club: match?.playerA?.club?.name || "-", score: sets[currentSet].a, player: 'a' as const },
+                  { name: match?.playerB?.name || "Player B", club: match?.playerB?.club?.name || "-", score: sets[currentSet].b, player: 'b' as const },
                 ].map((player, idx) => (
                   <div key={idx} className="space-y-4">
                     <div>
@@ -115,13 +235,13 @@ export default function UmpirePage() {
                       <Button
                         variant="outline"
                         className="flex-1 bg-transparent text-xl"
-                        onClick={() => player.setScore(Math.max(0, player.score - 1))}
+                        onClick={() => updateScore(player.player, -1)}
                       >
                         -1
                       </Button>
-                      <Button 
-                        className="flex-[2] text-xl shadow-lg" 
-                        onClick={() => player.setScore(player.score + 1)}
+                      <Button
+                        className="flex-[2] text-xl shadow-lg"
+                        onClick={() => updateScore(player.player, 1)}
                       >
                         +1
                       </Button>
@@ -133,16 +253,28 @@ export default function UmpirePage() {
               {/* Actions */}
               <div className="space-y-3 pt-4 border-t border-border">
                 <div className="grid grid-cols-2 gap-3">
-                  <Button 
-                    variant="outline" 
-                    className="bg-transparent" 
+                  <Button
+                    variant="outline"
+                    className="bg-transparent"
                     onClick={handleNextSet}
                   >
                     Next Set
                   </Button>
-                  <Button onClick={handleSubmit}>
-                    <CheckCircle size={20} className="mr-2" />
-                    End Match
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 animate-spin" size={20} />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={20} className="mr-2" />
+                        End Match
+                      </>
+                    )}
                   </Button>
                 </div>
                 <Button
@@ -151,9 +283,11 @@ export default function UmpirePage() {
                   onClick={() => {
                     setIsUnlocked(false)
                     setMatchCode("")
-                    setScoreA(0)
-                    setScoreB(0)
-                    setCurrentSet(1)
+                    setMatchId("")
+                    setMatch(null)
+                    setSets([{ a: 0, b: 0 }])
+                    setCurrentSet(0)
+                    setError("")
                   }}
                 >
                   Back to Code Entry
